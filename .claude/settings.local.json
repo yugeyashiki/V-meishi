@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm audit:*)",
+      "Bash(node:*)",
+      "Skill(discord:configure)",
+      "Bash(mkdir -p ~/.claude/channels/discord)",
+      "Read(//c/Users/81903/.claude/channels/discord/**)",
+      "Bash(chmod:*)"
+    ]
+  }
+}

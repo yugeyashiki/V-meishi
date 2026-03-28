@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- 背景（名刺カード） -->
+  <rect width="32" height="32" rx="6" fill="#0D0D0D"/>
+  <!-- カードの輪郭 -->
+  <rect x="4" y="7" width="24" height="18" rx="3" fill="#1a1a1a" stroke="#9B59B6" stroke-width="1.5"/>
+  <!-- アクセントライン -->
+  <rect x="7" y="20" width="10" height="2" rx="1" fill="#9B59B6"/>
+  <!-- "V" の文字 -->
+  <text x="16" y="18" font-family="'Noto Sans JP', sans-serif" font-size="11" font-weight="700"
+        fill="#FFFFFF" text-anchor="middle" dominant-baseline="middle">V</text>
+</svg>

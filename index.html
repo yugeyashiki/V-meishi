@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="MMDアバターを使ったインタラクティブなWeb名刺を作成・共有できるアプリ">
+  <meta name="theme-color" content="#0D0D0D">
+  <title>V名刺 - 3Dアバター名刺メーカー</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+
+  <!-- ========================================
+    トップナビゲーション（プレビュー中は非表示）
+  ======================================== -->
+  <nav class="app-nav" id="app-nav">
+    <button class="app-nav__tab active" data-mode="create">名刺を作る</button>
+    <button class="app-nav__tab" data-mode="receive">名刺を受け取る</button>
+  </nav>
+
+  <!-- ========================================
+    作成モード
+  ======================================== -->
+  <div id="create-mode" class="mode">
+
+    <!-- ① ファイルアップロード -->
+    <section id="file-uploader-section"></section>
+
+    <!-- 2カラムコンテナ（PC用） -->
+    <div class="create-body">
+
+      <!-- 左カラム: 名刺プレビュー（常時表示） -->
+      <div id="card-preview">
+        <!-- アバターエリア（上部 60%） -->
+        <div id="avatar-area">
+          <canvas id="avatar-canvas"></canvas>
+        </div>
+        <!-- テキストエリア（下部 40%） -->
+        <div id="card-text-area">
+          <p id="preview-name" class="card-name">名前</p>
+          <div class="accent-line"></div>
+          <p id="preview-organization" class="card-organization hidden"></p>
+          <p id="preview-catchphrase" class="card-catchphrase">キャッチコピー</p>
+          <span id="preview-genre" class="card-genre hidden"></span>
+          <div id="preview-links" class="card-links"></div>
+        </div>
+      </div>
+
+      <!-- 右カラム: 入力フォーム群 -->
+      <div class="create-forms">
+
+        <!-- プロフィール + SNS（PC時は左サブカラム） -->
+        <div class="create-forms__left">
+          <!-- ③ プロフィール入力フォーム -->
+          <section id="profile-form-section"></section>
+
+          <!-- ④ SNSリンク入力 -->
+          <section id="sns-links-section"></section>
+        </div>
+
+        <!-- ⑤ カラーカスタマイズ（PC時は右サブカラム） -->
+        <section id="theme-selector-section"></section>
+
+        <!-- プレビューモードへ切り替えボタン -->
+        <button id="btn-to-preview" class="btn-primary">プレビューを見る</button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ========================================
+    プレビューモード
+  ======================================== -->
+  <div id="preview-mode" class="mode hidden">
+
+    <!-- 名刺全体レイアウト -->
+    <div id="card-layout">
+      <!-- アバターエリア（#avatar-canvas を JS で移動して共有） -->
+      <div id="card-avatar-area">
+      </div>
+      <!-- テキストエリア -->
+      <div id="card-info-area">
+        <p id="card-name" class="card-name"></p>
+        <div class="accent-line"></div>
+        <p id="card-organization" class="card-organization hidden"></p>
+        <p id="card-catchphrase" class="card-catchphrase"></p>
+        <span id="card-genre" class="card-genre hidden"></span>
+        <div id="card-links" class="card-links"></div>
+      </div>
+    </div>
+
+    <!-- QRコード -->
+    <div id="qr-panel-section"></div>
+
+    <!-- アクションボタン群 -->
+    <div class="preview-actions">
+      <button id="btn-export-json" class="btn-secondary">JSONをエクスポート</button>
+      <button id="btn-to-create" class="btn-secondary">編集に戻る</button>
+    </div>
+
+  </div>
+
+  <!-- ========================================
+    受け取りモード
+  ======================================== -->
+  <div id="receive-mode" class="mode hidden">
+  </div>
+
+  <!-- ammo.js (Bullet Physics for MMD) -->
+  <!-- 流用元: D:\AI3DViewMMD\index.html の CDN scriptタグ -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/ammo.wasm.js" crossorigin="anonymous"></script>
+
+  <!-- エントリーポイント -->
+  <script type="module" src="/src/main.js"></script>
+
+</body>
+</html>

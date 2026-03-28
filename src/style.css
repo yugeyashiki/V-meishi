@@ -1,0 +1,1360 @@
+/* ============================================================
+   V名刺 - グローバルスタイル
+   スマホ縦型を基準とし、PC横型へレスポンシブ切り替え
+   ============================================================ */
+
+/* ============================================================
+   1. CSSリセット
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: 'Noto Sans JP', 'Hiragino Sans', 'YuGothic', sans-serif;
+  background: #1a1a1a;
+  color: #ffffff;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+img, canvas {
+  display: block;
+  max-width: 100%;
+}
+
+/* ============================================================
+   2. カラートークン（CSS変数）
+   デフォルト: ダーク単色プリセット
+   ThemeSelector.js からクラス切り替えまたは変数上書きで変更する
+   ============================================================ */
+:root {
+  /* --- ダーク（デフォルト） --- */
+  --bg-color: #0D0D0D;
+  --text-color: #FFFFFF;
+  --accent-color: #9B59B6;
+
+  /* グラデーション用（背景タイプが gradient のときに使用） */
+  --bg-grad-from: #1a1a2e;
+  --bg-grad-to: #16213e;
+
+  /* カードサイズ基準（スマホ縦型） */
+  --card-width: 390px;
+  --card-height: 700px;
+  --avatar-ratio: 60%;   /* アバターエリアの高さ比率 */
+  --text-ratio: 40%;     /* テキストエリアの高さ比率 */
+
+  /* タイポグラフィ */
+  --font-size-name: 30px;
+  --font-size-catchphrase: 15px;
+  --font-size-sns: 13px;
+
+  /* アクセントライン */
+  --accent-line-height: 2px;
+  --accent-line-width: 60px;
+
+  /* SNSアイコン */
+  --sns-icon-size: 38px;
+  --sns-icon-radius: 8px;
+
+  /* UIカラー */
+  --ui-bg: #1a1a1a;
+  --ui-surface: #2a2a2a;
+  --ui-border: #3a3a3a;
+  --ui-primary: #9B59B6;
+}
+
+/* --- カラープリセット用クラス（ThemeSelector.js が付け替える） --- */
+
+/* ダークグラデーション */
+.theme-dark-gradient {
+  --bg-color: linear-gradient(135deg, #1a1a2e, #16213e);
+  --text-color: #FFFFFF;
+  --accent-color: #9B59B6;
+}
+
+/* ネオン */
+.theme-neon {
+  --bg-color: #0A0A0A;
+  --text-color: #FFFFFF;
+  --accent-color: #00FFFF;
+}
+
+/* ライト */
+.theme-light {
+  --bg-color: #FFFFFF;
+  --text-color: #222222;
+  --accent-color: #FF6B9D;
+}
+
+/* ナチュラル */
+.theme-natural {
+  --bg-color: #F5F0E8;
+  --text-color: #3D2B1F;
+  --accent-color: #8B6F47;
+}
+
+/* ============================================================
+   3. ユーティリティ
+   ============================================================ */
+.hidden {
+  display: none !important;
+}
+
+/* ============================================================
+   4. モード切り替えラッパー
+   ============================================================ */
+.mode {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+  gap: 16px;
+  background: var(--ui-bg);
+  /* iOS Safari の overscroll バウンスを防ぐ */
+  overscroll-behavior: none;
+}
+
+/* 作成モード: 2カラムコンテナ（モバイル: 縦並び） */
+.create-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+/* 作成モード: フォーム群ラッパー（モバイル: 縦並び） */
+.create-forms {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+/* プロフィール+SNSのサブラッパー（モバイル: 縦並び） */
+.create-forms__left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+/* ============================================================
+   5. 名刺カード（縦型・スマホ基準）
+   ============================================================ */
+#card-preview,
+#card-layout {
+  width: var(--card-width);
+  max-width: 100%;
+  height: var(--card-height);
+  background: var(--bg-color);
+  color: var(--text-color);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+
+/* アバターエリア（上部 60%） */
+#avatar-area,
+#card-avatar-area {
+  height: var(--avatar-ratio);
+  width: 100%;
+  position: relative;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+#avatar-area canvas,
+#card-avatar-area canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* タッチ操作でモデルを回転させるためスクロールを無効化 */
+  touch-action: none;
+}
+
+/* テキストエリア（下部 40%） */
+#card-text-area,
+#card-info-area {
+  height: var(--text-ratio);
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-color);
+  color: var(--text-color);
+}
+
+/* 名前 */
+.card-name {
+  font-size: var(--font-size-name);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-color);
+}
+
+/* アクセントライン */
+.accent-line {
+  width: var(--accent-line-width);
+  height: var(--accent-line-height);
+  background: var(--accent-color);
+  border-radius: 2px;
+}
+
+/* キャッチコピー */
+.card-catchphrase {
+  font-size: var(--font-size-catchphrase);
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--text-color);
+  opacity: 0.85;
+}
+
+/* 所属事務所・会社名 */
+.card-organization {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--text-color);
+  opacity: 0.72;
+}
+
+/* ジャンルバッジ */
+.card-genre {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 20px;
+  background: rgba(128, 128, 128, 0.25);
+  color: var(--text-color);
+  opacity: 0.7;
+  letter-spacing: 0.03em;
+}
+
+/* SNSリンクリスト */
+.card-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+}
+
+/* SNSリンク行 */
+.card-link-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* SNSアイコン背景 */
+.sns-icon-box {
+  width: var(--sns-icon-size);
+  height: var(--sns-icon-size);
+  background: #000000;
+  border-radius: var(--sns-icon-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 18px;
+}
+
+/* SNSリンクテキスト */
+.sns-link-text {
+  font-size: var(--font-size-sns);
+  color: var(--text-color);
+  opacity: 0.9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   6. ボタン
+   ============================================================ */
+.btn-primary {
+  padding: 14px 40px;
+  background: var(--ui-primary);
+  color: #ffffff;
+  border-radius: 50px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.btn-primary:hover {
+  opacity: 0.85;
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  padding: 12px 32px;
+  background: var(--ui-surface);
+  color: var(--text-color);
+  border: 1px solid var(--ui-border);
+  border-radius: 50px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+
+.btn-secondary:hover {
+  opacity: 0.8;
+}
+
+/* ============================================================
+   7. FileUploader
+   ============================================================ */
+
+/* コンテナ */
+.file-uploader {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.uploader-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-color);
+  opacity: 0.6;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+/* ドロップゾーン */
+.upload-zone {
+  position: relative;
+  border: 2px dashed var(--ui-border);
+  border-radius: 12px;
+  background: var(--ui-surface);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.upload-zone:hover,
+.upload-zone--drag {
+  border-color: var(--ui-primary);
+  background: color-mix(in srgb, var(--ui-primary) 8%, var(--ui-surface));
+}
+
+.upload-zone__body {
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  pointer-events: none; /* クリックは .upload-zone で受ける */
+}
+
+.upload-zone--small .upload-zone__body {
+  padding: 16px 20px;
+}
+
+.upload-zone__icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.upload-zone--small .upload-zone__icon {
+  font-size: 22px;
+}
+
+.upload-zone__main {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-color);
+  opacity: 0.85;
+}
+
+.upload-zone__link {
+  color: var(--ui-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.upload-zone__sub {
+  font-size: 11px;
+  color: var(--text-color);
+  opacity: 0.45;
+  line-height: 1.5;
+}
+
+.upload-zone__badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 20px;
+  background: var(--ui-border);
+  color: var(--text-color);
+  opacity: 0.7;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+/* ファイル input は非表示（ゾーンクリックでトリガー） */
+.upload-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  pointer-events: none; /* JS から .click() するのみ */
+}
+
+/* ステータスメッセージ */
+.upload-status {
+  font-size: 12px;
+  min-height: 1.4em;
+  line-height: 1.4;
+  color: var(--text-color);
+  opacity: 0.7;
+  padding: 0 4px;
+}
+
+.upload-status--ok    { color: #4ade80; opacity: 1; }
+.upload-status--warn  { color: #facc15; opacity: 1; }
+.upload-status--error { color: #f87171; opacity: 1; }
+
+/* プログレスバー */
+.load-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--ui-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-bar__fill {
+  height: 100%;
+  background: var(--ui-primary);
+  border-radius: 2px;
+  transition: width 0.2s ease;
+  width: 0%;
+}
+
+.progress-label {
+  font-size: 12px;
+  color: var(--text-color);
+  opacity: 0.6;
+}
+
+/* ============================================================
+   8. 物理演算トグル
+   ============================================================ */
+
+.physics-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+}
+
+.physics-toggle-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-color);
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+
+.physics-toggle-hint {
+  font-size: 11px;
+  color: var(--text-color);
+  opacity: 0.4;
+}
+
+/* トグルスイッチ */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.toggle-switch__track {
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  background: var(--ui-border);
+  transition: background 0.2s;
+}
+
+.toggle-switch__track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+}
+
+.toggle-switch input:checked + .toggle-switch__track {
+  background: var(--ui-primary);
+}
+
+.toggle-switch input:checked + .toggle-switch__track::after {
+  transform: translateX(20px);
+}
+
+/* ============================================================
+   9. フォーム共通（ProfileForm / SnsLinks）
+   ============================================================ */
+
+.form-section {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-section__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-color);
+  opacity: 0.6;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* フィールド */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-color);
+  opacity: 0.85;
+}
+
+.form-required {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 20px;
+  background: var(--ui-primary);
+  color: #fff;
+  opacity: 1;
+}
+
+.form-counter {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.45;
+}
+
+.form-counter--warn {
+  color: #facc15;
+  opacity: 1;
+}
+
+/* テキスト入力 */
+.form-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 8px;
+  color: var(--text-color);
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
+  border-color: var(--ui-primary);
+}
+
+.form-input::placeholder {
+  opacity: 0.35;
+}
+
+/* セレクト */
+.form-select {
+  padding: 10px 12px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 8px;
+  color: var(--text-color);
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* SNS リスト */
+.sns-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sns-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sns-row__platform {
+  width: 140px;
+}
+
+.sns-row__url {
+  flex: 1;
+  min-width: 0;
+}
+
+.sns-row__delete {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid var(--ui-border);
+  color: var(--text-color);
+  opacity: 0.5;
+  font-size: 12px;
+  cursor: pointer;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.sns-row__delete:hover {
+  opacity: 1;
+  background: rgba(248, 113, 113, 0.15);
+  border-color: #f87171;
+  color: #f87171;
+}
+
+/* 追加ボタン */
+.btn-add-sns {
+  align-self: flex-start;
+  padding: 8px 18px;
+  background: var(--ui-surface);
+  border: 1px dashed var(--ui-border);
+  border-radius: 8px;
+  color: var(--ui-primary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.btn-add-sns:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ui-primary) 10%, var(--ui-surface));
+  border-color: var(--ui-primary);
+}
+
+.btn-add-sns--disabled,
+.btn-add-sns:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sns-hint {
+  font-size: 11px;
+  color: var(--text-color);
+  opacity: 0.4;
+  min-height: 1em;
+}
+
+/* ============================================================
+   10. ThemeSelector
+   ============================================================ */
+
+/* プリセット横スクロール列 */
+.theme-presets {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+/* プリセットサムネイル */
+.theme-thumb {
+  flex-shrink: 0;
+  width: 72px;
+  height: 84px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 8px;
+  gap: 4px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s, transform 0.15s;
+}
+
+.theme-thumb:hover {
+  transform: translateY(-2px);
+}
+
+.theme-thumb--active {
+  border-color: var(--ui-primary);
+  box-shadow: 0 0 0 2px var(--ui-primary);
+}
+
+.theme-thumb__accent {
+  position: absolute;
+  bottom: 28px;
+  left: 12px;
+  width: 32px;
+  height: 2px;
+  border-radius: 2px;
+}
+
+.theme-thumb__label {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+.theme-thumb--custom {
+  background: var(--ui-surface);
+  border: 2px dashed var(--ui-border);
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.theme-thumb--custom .theme-thumb__label {
+  color: var(--text-color);
+  opacity: 0.7;
+  text-shadow: none;
+}
+
+.theme-thumb__icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+/* カスタムパネル */
+.theme-custom-panel {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* タブ */
+.theme-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.theme-tab {
+  flex: 1;
+  padding: 10px 0;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-color);
+  opacity: 0.5;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s, border-bottom 0.2s;
+  border-bottom: 2px solid transparent;
+}
+
+.theme-tab--active {
+  opacity: 1;
+  border-bottom-color: var(--ui-primary);
+}
+
+/* タブパネル共通 */
+.theme-tab-panel {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* カラー行 */
+.color-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.color-label {
+  font-size: 13px;
+  color: var(--text-color);
+  opacity: 0.8;
+  flex: 1;
+}
+
+.color-picker-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-picker {
+  width: 40px;
+  height: 32px;
+  padding: 2px;
+  border: 1px solid var(--ui-border);
+  border-radius: 6px;
+  background: var(--ui-surface);
+  cursor: pointer;
+}
+
+.color-value {
+  font-size: 12px;
+  font-family: monospace;
+  color: var(--text-color);
+  opacity: 0.55;
+  width: 52px;
+}
+
+/* 画像アップロードゾーン */
+.image-drop-zone {
+  position: relative;
+  border: 2px dashed var(--ui-border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.image-drop-zone:hover,
+.image-drop-zone--drag {
+  border-color: var(--ui-primary);
+  background: color-mix(in srgb, var(--ui-primary) 8%, var(--ui-surface));
+}
+
+.image-drop-zone__body {
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.image-drop-zone__icon {
+  font-size: 24px;
+}
+
+.image-drop-zone__label {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-color);
+  opacity: 0.8;
+}
+
+/* ============================================================
+   11. QRCodePanel
+   ============================================================ */
+
+.qr-panel {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 16px;
+}
+
+.qr-panel__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
+.qr-panel__desc {
+  font-size: 13px;
+  color: var(--text-color);
+  opacity: 0.55;
+  text-align: center;
+  margin-top: -8px;
+}
+
+/* canvas ラッパー */
+.qr-canvas-wrap {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-canvas {
+  border-radius: 8px;
+  display: block;
+}
+
+.qr-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--text-color);
+  opacity: 0.5;
+  background: var(--ui-surface);
+  border-radius: 8px;
+}
+
+.qr-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--text-color);
+  opacity: 0.4;
+  border: 2px dashed var(--ui-border);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+/* ダウンロードボタン */
+.qr-actions {
+  width: 100%;
+}
+
+.qr-actions .btn-primary {
+  width: 100%;
+  text-align: center;
+}
+
+.qr-actions .btn-primary:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* データ確認 */
+.qr-data-detail {
+  width: 100%;
+}
+
+.qr-data-summary {
+  font-size: 12px;
+  color: var(--text-color);
+  opacity: 0.45;
+  cursor: pointer;
+  user-select: none;
+}
+
+.qr-data-pre {
+  margin-top: 8px;
+  padding: 12px;
+  background: #000;
+  border-radius: 8px;
+  font-size: 11px;
+  font-family: monospace;
+  color: #7ec8a0;
+  overflow-x: auto;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ============================================================
+   12. レスポンシブ対応 - PC 横型（769px〜）
+   ============================================================ */
+@media (min-width: 769px) {
+  /* カードを横型に切り替え */
+  #card-preview,
+  #card-layout {
+    width: 760px;
+    height: 440px;
+    flex-direction: row;
+  }
+
+  /* アバターエリア: 左 60% */
+  #avatar-area,
+  #card-avatar-area {
+    width: 60%;
+    height: 100%;
+  }
+
+  /* テキストエリア: 右 40% */
+  #card-text-area,
+  #card-info-area {
+    width: 40%;
+    height: 100%;
+    padding: 32px 28px;
+  }
+
+  .card-name {
+    font-size: 32px;
+  }
+
+  /* 作成モード: 2カラムレイアウト */
+  .create-body {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 32px;
+    max-width: 1600px;
+  }
+
+  /* 左カラム: 名刺プレビューを sticky 固定 */
+  #card-preview {
+    position: sticky;
+    top: 56px;
+    flex-shrink: 0;
+  }
+
+  /* 右カラム: フォーム群（PC: Grid 2列 + ボタン全幅） */
+  .create-forms {
+    display: grid;
+    grid-template-columns: fit-content(480px) 220px;
+    grid-template-areas:
+      "left  theme"
+      "btn   btn";
+    column-gap: 20px;
+    row-gap: 16px;
+    align-items: start;
+    justify-content: start;
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* プロフィール+SNS: 左グリッドセル */
+  .create-forms__left {
+    grid-area: left;
+    align-items: flex-start;
+  }
+
+  /* カラーテーマ: 右グリッドセル */
+  #theme-selector-section {
+    grid-area: theme;
+  }
+
+  /* プレビューボタン: 両列にまたがる最下段 */
+  #btn-to-preview {
+    grid-area: btn;
+  }
+
+  /* テーマプリセット: PC では折り返して縦2列表示 */
+  .theme-presets {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  /* ファイルアップローダー: 上部に全幅 */
+  #file-uploader-section {
+    max-width: 1200px;
+    width: 100%;
+  }
+
+  #file-uploader-section .file-uploader {
+    max-width: none;
+  }
+}
+
+/* ============================================================
+   13. トップナビゲーション
+   ============================================================ */
+.app-nav {
+  display: flex;
+  align-items: center;
+  background: #111;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.app-nav.hidden {
+  display: none;
+}
+
+.app-nav__tab {
+  flex: 1;
+  padding: 14px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.5);
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.app-nav__tab.active {
+  color: #fff;
+  border-bottom-color: var(--accent-color, #9B59B6);
+}
+
+.app-nav__tab:hover:not(.active) {
+  color: rgba(255,255,255,0.75);
+}
+
+/* ============================================================
+   14. プレビューモード - アクションボタン群
+   ============================================================ */
+.preview-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 16px 32px;
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ============================================================
+   15. 受け取りパネル
+   ============================================================ */
+.receive-panel {
+  padding: 24px 16px 48px;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.receive-panel__title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* サブタブ */
+.receive-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+  margin-bottom: 24px;
+}
+
+.receive-tab {
+  flex: 1;
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.45);
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.receive-tab.active {
+  color: #fff;
+  border-bottom-color: var(--accent-color, #9B59B6);
+}
+
+.receive-tab-panel {
+  animation: fadeIn 0.2s ease;
+}
+
+/* 読み込みカードプレビュー */
+.imported-card-preview {
+  margin-top: 20px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.static-card-preview {
+  padding: 24px 20px;
+  min-height: 160px;
+}
+
+.static-card-preview .card-name {
+  font-size: 22px;
+}
+
+.static-card-preview .card-catchphrase {
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.imported-card-actions {
+  display: flex;
+  gap: 10px;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.04);
+  flex-wrap: wrap;
+}
+
+.imported-card-actions .btn-primary,
+.imported-card-actions .btn-secondary {
+  flex: 1;
+  min-width: 120px;
+  font-size: 13px;
+  padding: 10px 12px;
+}
+
+/* ============================================================
+   16. コレクショングリッド
+   ============================================================ */
+.collection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.collection-item {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: #1a1a1a;
+  transition: transform 0.15s;
+}
+
+.collection-item:hover {
+  transform: translateY(-2px);
+}
+
+.collection-item__card {
+  padding: 14px 12px;
+  min-height: 90px;
+}
+
+.collection-item__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: rgba(0,0,0,0.3);
+  gap: 6px;
+}
+
+.collection-item__date {
+  font-size: 10px;
+  color: rgba(255,255,255,0.4);
+  white-space: nowrap;
+}
+
+.collection-item__btns {
+  display: flex;
+  gap: 5px;
+}
+
+.collection-empty {
+  text-align: center;
+  color: rgba(255,255,255,0.4);
+  font-size: 14px;
+  padding: 48px 0;
+}
+
+/* xs ボタン（コレクション用） */
+.btn-xs {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-xs.btn-primary {
+  background: var(--accent-color, #9B59B6);
+  color: #fff;
+}
+
+.btn-xs.btn-danger {
+  background: rgba(231, 76, 60, 0.8);
+  color: #fff;
+}
+
+.btn-xs:hover {
+  opacity: 0.85;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (min-width: 769px) {
+  .collection-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+  .preview-actions {
+    flex-direction: row;
+    justify-content: center;
+  }
+  .preview-actions .btn-primary,
+  .preview-actions .btn-secondary {
+    width: auto;
+    min-width: 180px;
+  }
+}
