@@ -9,9 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "three": "^0.160.0",
+    "@supabase/supabase-js": "^2.100.1",
     "mmd-parser": "^1.0.4",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "three": "^0.160.0"
   },
   "devDependencies": {
     "vite": "^5.0.0"

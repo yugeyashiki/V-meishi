@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { resolve } from 'path';
 
 export default defineConfig({
   // PMX / VMD をバイナリアセットとして扱う
@@ -7,5 +8,14 @@ export default defineConfig({
   server: {
     // スマホ実機確認用 (npm run dev -- --host でも可)
     host: true,
+  },
+  build: {
+    rollupOptions: {
+      // マルチページアプリ: トップ画面 + 閲覧専用ページ
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        card: resolve(__dirname, 'card/index.html'),
+      },
+    },
   },
 });

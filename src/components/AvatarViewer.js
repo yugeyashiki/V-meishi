@@ -16,6 +16,7 @@ import * as THREE from 'three';
 import { MMDLoader } from 'three/addons/loaders/MMDLoader.js';
 import { initPhysics, createHelper, loadModel, loadMotion } from '../core/mmd.js';
 import { initInteraction } from '../core/interaction.js';
+import { decodeMesh } from '../core/decoder.js';
 
 // ============================================================
 // カメラ設定（流用元: script.js CONFIG）
@@ -164,6 +165,36 @@ export function setPhysics(enabled) {
  */
 export function getPhysics() {
   return usePhysics;
+}
+
+/**
+ * VMB1 バイナリを復号・デコードしてシーンに表示する
+ * card/index.html の閲覧フローで使用。ローカルファイル読み込みとは独立。
+ *
+ * @param {ArrayBuffer} vmbBuffer  - decrypt() の返り値（VMB1 形式）
+ * @param {Function}    [onProgress] - (percent: 0-100) => void
+ */
+export async function loadFromVMB(vmbBuffer, onProgress) {
+  // 既存メッシュを破棄（ローカルロード中のものも含む）
+  if (mesh) {
+    scene.remove(mesh);
+    if (helper) { helper.remove(mesh); helper = null; }
+    mesh = null;
+  }
+
+  mesh = await decodeMesh(vmbBuffer, onProgress);
+  scene.add(mesh);
+
+  // VMB1 由来のメッシュはモーション・物理データを持たないため
+  // MMDAnimationHelper は生成しない（helper = null のまま）
+}
+
+/**
+ * 現在ロード済みのメッシュを返す（開発・エンコード用）
+ * @returns {THREE.SkinnedMesh|null}
+ */
+export function getMesh() {
+  return mesh;
 }
 
 /**

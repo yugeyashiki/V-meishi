@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0D0D0D">
+  <title>V名刺</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css">
+  <link rel="stylesheet" href="/src/card.css">
+</head>
+<body class="card-page">
+
+  <!-- ローディング -->
+  <div id="card-loading" class="card-overlay">
+    <div class="card-overlay__spinner"></div>
+    <p id="card-loading-msg" class="card-overlay__msg">読み込み中...</p>
+  </div>
+
+  <!-- エラー -->
+  <div id="card-error" class="card-overlay hidden">
+    <p class="card-overlay__icon">⚠️</p>
+    <p class="card-error__msg">名刺が見つかりませんでした</p>
+    <p class="card-overlay__sub">URLを確認してください</p>
+  </div>
+
+  <!-- カード本体（ロード完了後に表示） -->
+  <div id="card-viewer" class="card-viewer hidden">
+    <div id="card-layout">
+      <!-- アバターエリア（上部 60%） -->
+      <div id="card-avatar-area">
+        <canvas id="avatar-canvas"></canvas>
+      </div>
+      <!-- テキストエリア（下部 40%） -->
+      <div id="card-info-area">
+        <p id="card-name"         class="card-name"></p>
+        <div class="accent-line"></div>
+        <p id="card-organization" class="card-organization hidden"></p>
+        <p id="card-catchphrase"  class="card-catchphrase"></p>
+        <span id="card-genre"     class="card-genre hidden"></span>
+        <div id="card-links"      class="card-links"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ammo.js (Bullet Physics for MMD) -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/ammo.wasm.js" crossorigin="anonymous"></script>
+
+  <!-- エントリーポイント -->
+  <script type="module" src="/src/card.js"></script>
+
+</body>
+</html>
