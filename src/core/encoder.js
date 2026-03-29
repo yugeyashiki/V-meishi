@@ -355,22 +355,38 @@ async function encodeTexture(mat) {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(img, 0, 0, w, h);
 
-    // マテリアルフラグによる判定（通常の Three.js マテリアル）
+    // マテリアルフラグによる基本判定
     let hasAlpha = (mat.transparent === true) || (mat.alphaTest ?? 0) > 0;
 
-    // MMDToonMaterial はカスタムシェーダーで alpha を処理するため
-    // transparent=false / alphaTest=0 のままでも PNG テクスチャにアルファがある場合がある。
-    // Canvas の実ピクセルをスキャンして透明ピクセルの有無を確認する。
     if (!hasAlpha) {
-      try {
-        const imageData = ctx.getImageData(0, 0, w, h);
-        const pixels = imageData.data;          // RGBA の連続配列
-        for (let i = 3; i < pixels.length; i += 4) {
-          if (pixels[i] < 255) { hasAlpha = true; break; }
+      // ソース画像が PNG かを先頭バイトで確認する。
+      // JPEG はアルファチャンネルを持てないのでスキャン不要。
+      // PNG のみスキャン対象とする。
+      const srcIsPng = await detectSourceIsPng(img.src);
+
+      if (srcIsPng) {
+        // PNG ソースのみアルファピクセルをスキャンする。
+        // スキャン失敗（tainted canvas 等）やスキャンで検出できない場合でも
+        // PNG ソースは保守的に PNG として保存してアルファチャンネルを保護する。
+        try {
+          const imageData = ctx.getImageData(0, 0, w, h);
+          const pixels    = imageData.data;
+          for (let i = 3; i < pixels.length; i += 4) {
+            if (pixels[i] < 255) { hasAlpha = true; break; }
+          }
+          if (!hasAlpha) {
+            // 透明ピクセル未検出でも PNG ソースは PNG で保存
+            // （MMDToonMaterial の alpha はシェーダーで制御されるため canvas に現れない場合がある）
+            console.log(`[Encoder] PNG ソース・透明ピクセル未検出 → 保守的に PNG 保存: "${mat.name ?? ''}"`);
+            hasAlpha = true;
+          }
+        } catch (e) {
+          // tainted canvas など getImageData 不可の場合
+          console.warn(`[Encoder] アルファスキャン失敗・PNG として保存: "${mat.name ?? ''}"`, e);
+          hasAlpha = true;
         }
-      } catch (_) {
-        // tainted canvas 等でアクセス不可の場合はマテリアルフラグに従う
       }
+      // JPEG ソース: アルファ不可。hasAlpha=false のまま → JPEG として保存
     }
 
     const mimeType = hasAlpha ? 'image/png' : 'image/jpeg';
@@ -382,11 +398,34 @@ async function encodeTexture(mat) {
     if (!blob) return null;
 
     const data = await blob.arrayBuffer();
-    // hasAlpha を返してマテリアル書き込み時に alphaTest を設定できるようにする
     return { type: texType, width: w, height: h, data, hasAlpha };
   } catch (e) {
     console.warn('[Encoder] テクスチャエンコード失敗:', mat.name ?? '(unnamed)', e);
     return null;
+  }
+}
+
+/**
+ * 画像 URL の先頭バイトを読んでソースが PNG かどうかを確認する。
+ * JPEG はアルファを持てないためスキャン対象外とする判定に使用。
+ *
+ * @param {string} src - 画像の URL (blob: / http: など)
+ * @returns {Promise<boolean>} PNG なら true
+ */
+async function detectSourceIsPng(src) {
+  if (!src) return false;
+  try {
+    const response = await fetch(src);
+    const reader   = response.body.getReader();
+    const { value } = await reader.read();
+    reader.cancel().catch(() => {});
+    // PNG マジックバイト: 0x89 0x50 0x4E 0x47 (\x89PNG)
+    return (
+      value?.[0] === 0x89 && value?.[1] === 0x50 &&
+      value?.[2] === 0x4E && value?.[3] === 0x47
+    );
+  } catch (_) {
+    return false;
   }
 }
 
