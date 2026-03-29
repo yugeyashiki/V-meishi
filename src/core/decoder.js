@@ -241,11 +241,14 @@ async function buildMaterial(def) {
     try {
       const texture = await loadTextureFromBytes(def.texMeta);
       mat.map = texture;
-      // PNG テクスチャで透過設定が未指定の場合は alphaTest を有効化する（安全対策）。
-      // encoder 側で hasAlpha 検出して alphaTest=0.5 を書き込むが、
+      // PNG テクスチャで透過設定が未指定の場合は transparent=true に昇格する（安全対策）。
+      // encoder 側で hasAlpha 検出して transparent=true を書き込むが、
       // 旧データや edge case のフォールバックとして残す。
+      // alphaTest=0.5 (オペークパス) ではなく transparent=true (透明パス) を使うことで
+      // フェイスメッシュによる depth test 失敗を回避する。
       if (def.texMeta.type === 1 /* PNG */ && !def.transparent && def.alphaTest === 0) {
-        mat.alphaTest = 0.5;
+        mat.transparent = true;
+        mat.depthWrite  = false;
       }
       mat.needsUpdate = true;
     } catch (e) {

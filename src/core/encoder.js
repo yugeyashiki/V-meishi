@@ -226,30 +226,35 @@ export async function encodeMesh(mesh) {
 
     // MMDToonMaterial はカスタムシェーダーで alpha を処理するため
     // transparent=false / alphaTest=0 のままでも PNG テクスチャにアルファがある場合がある。
-    // encodeTexture() が検出した hasAlpha を使って alphaTest を補完する。
-    const texHasAlpha   = textures[i]?.hasAlpha ?? false;
-    const isTransparent = mat.transparent ?? false;
-    const origAlphaTest = mat.alphaTest   ?? 0;
-    // テクスチャにアルファがあるのに設定が 0 の場合 → alphaTest=0.5 で切り抜き透過を有効化
-    const alphaTestVal  = (texHasAlpha && !isTransparent && origAlphaTest === 0)
-      ? 0.5
-      : origAlphaTest;
+    // encodeTexture() が検出した hasAlpha を使って transparent フラグを補完する。
+    //
+    // ※ alphaTest=0.5 (オペークパス) ではなく transparent=true (透明パス) を使う理由:
+    //   Three.js はオペークパスを「前から後ろ」の順でレンダリングするため、
+    //   フェイスメッシュが depth buffer を先に書き込み、
+    //   目・まつ毛が depth test 失敗で消えてしまう。
+    //   transparent=true にすることでオペーク全体の後に描画され、
+    //   正しく顔の前に表示される（MMDLoader の本来の挙動と同じ）。
+    const texHasAlpha    = textures[i]?.hasAlpha ?? false;
+    const isTransparent  = mat.transparent ?? false;
+    const origAlphaTest  = mat.alphaTest   ?? 0;
+    // テクスチャにアルファがあり、かつ元の設定が完全に不透明の場合 → transparent=true に昇格
+    const useTransparent = texHasAlpha && !isTransparent && origAlphaTest === 0;
+    const transparentVal = useTransparent ? true : isTransparent;
 
-    w.writeFloat32(col.r);                      // 4
-    w.writeFloat32(col.g);                      // 4
-    w.writeFloat32(col.b);                      // 4
-    w.writeFloat32(mat.opacity  ?? 1.0);        // 4
-    w.writeUint8(isTransparent ? 1 : 0);        // 1
-    w.writeFloat32(alphaTestVal);               // 4
-    w.writeInt16(tIdx);                         // 2  (-1 = テクスチャなし)
-    w.writeUint8(mat.side ?? THREE.FrontSide);  // 1  side (0=Front/1=Back/2=Double)
+    w.writeFloat32(col.r);                          // 4
+    w.writeFloat32(col.g);                          // 4
+    w.writeFloat32(col.b);                          // 4
+    w.writeFloat32(mat.opacity  ?? 1.0);            // 4
+    w.writeUint8(transparentVal ? 1 : 0);           // 1
+    w.writeFloat32(origAlphaTest);                  // 4  alphaTest は変更しない
+    w.writeInt16(tIdx);                             // 2  (-1 = テクスチャなし)
+    w.writeUint8(mat.side ?? THREE.FrontSide);      // 1  side (0=Front/1=Back/2=Double)
 
     const texInfo = tIdx >= 0
       ? `texIdx=${tIdx} ${texList[tIdx].width}x${texList[tIdx].height} ${texList[tIdx].type === 0 ? 'JPEG' : 'PNG'} ${(texList[tIdx].data.byteLength / 1024).toFixed(0)}KB`
       : (mat.map?.image ? '⚠ エンコード失敗' : 'テクスチャなし');
-    const alphaInfo = texHasAlpha && origAlphaTest === 0 && !isTransparent
-      ? ` [alphaTest 0→0.5 自動設定]` : '';
-    console.log(`[Encoder] mat[${i}] "${mat.name ?? ''}" transparent=${isTransparent} alphaTest=${alphaTestVal}${alphaInfo} → ${texInfo}`);
+    const alphaInfo = useTransparent ? ` [transparent false→true 自動昇格]` : '';
+    console.log(`[Encoder] mat[${i}] "${mat.name ?? ''}" transparent=${transparentVal} alphaTest=${origAlphaTest}${alphaInfo} → ${texInfo}`);
   }
   console.log(`[Encoder] テクスチャ数: ${texCount}/${matCount}`);
 

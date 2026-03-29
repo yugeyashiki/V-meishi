@@ -16,7 +16,7 @@
 
 import { loadCard, downloadModel, incrementViewCount } from './core/supabase.js';
 import { importKeyFromBase64, decrypt }                from './core/crypto.js';
-import { init as initAvatarViewer, loadFromVMB, setPose } from './components/AvatarViewer.js';
+import { init as initAvatarViewer, loadFromVMB, setPose, getMesh } from './components/AvatarViewer.js';
 
 // SNS プラットフォームアイコン（CardLayout.js と同じ定義）
 const PLATFORM_ICONS = {
@@ -72,6 +72,21 @@ async function main() {
     if (card.pose && Object.keys(card.pose).length > 0) {
       setPose(card.pose);
     }
+
+    // デバッグ: コンソールから window.__testDecoder() でマテリアルを確認可能
+    window.__testDecoder = () => {
+      const mesh = getMesh();
+      if (!mesh) { console.log('[Test] メッシュ未ロード'); return; }
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      console.log(`[Test] マテリアル数: ${mats.length}`);
+      mats.forEach((m, i) => {
+        console.log(
+          `  mat[${i}] transparent=${m.transparent} alphaTest=${m.alphaTest}` +
+          ` depthWrite=${m.depthWrite} map=${!!m.map} side=${m.side}` +
+          ` (${m.name ?? ''})`,
+        );
+      });
+    };
 
     // 閲覧数カウント（fire-and-forget）
     incrementViewCount(uuid);
