@@ -224,19 +224,32 @@ export async function encodeMesh(mesh) {
     const col  = mat.color ?? new THREE.Color(1, 1, 1);
     const tIdx = texIndexForMat[i];
 
+    // MMDToonMaterial はカスタムシェーダーで alpha を処理するため
+    // transparent=false / alphaTest=0 のままでも PNG テクスチャにアルファがある場合がある。
+    // encodeTexture() が検出した hasAlpha を使って alphaTest を補完する。
+    const texHasAlpha   = textures[i]?.hasAlpha ?? false;
+    const isTransparent = mat.transparent ?? false;
+    const origAlphaTest = mat.alphaTest   ?? 0;
+    // テクスチャにアルファがあるのに設定が 0 の場合 → alphaTest=0.5 で切り抜き透過を有効化
+    const alphaTestVal  = (texHasAlpha && !isTransparent && origAlphaTest === 0)
+      ? 0.5
+      : origAlphaTest;
+
     w.writeFloat32(col.r);                      // 4
     w.writeFloat32(col.g);                      // 4
     w.writeFloat32(col.b);                      // 4
     w.writeFloat32(mat.opacity  ?? 1.0);        // 4
-    w.writeUint8(mat.transparent ? 1 : 0);      // 1
-    w.writeFloat32(mat.alphaTest ?? 0);         // 4
+    w.writeUint8(isTransparent ? 1 : 0);        // 1
+    w.writeFloat32(alphaTestVal);               // 4
     w.writeInt16(tIdx);                         // 2  (-1 = テクスチャなし)
     w.writeUint8(mat.side ?? THREE.FrontSide);  // 1  side (0=Front/1=Back/2=Double)
 
     const texInfo = tIdx >= 0
       ? `texIdx=${tIdx} ${texList[tIdx].width}x${texList[tIdx].height} ${texList[tIdx].type === 0 ? 'JPEG' : 'PNG'} ${(texList[tIdx].data.byteLength / 1024).toFixed(0)}KB`
       : (mat.map?.image ? '⚠ エンコード失敗' : 'テクスチャなし');
-    console.log(`[Encoder] mat[${i}] "${mat.name ?? ''}" transparent=${mat.transparent} alphaTest=${mat.alphaTest ?? 0} → ${texInfo}`);
+    const alphaInfo = texHasAlpha && origAlphaTest === 0 && !isTransparent
+      ? ` [alphaTest 0→0.5 自動設定]` : '';
+    console.log(`[Encoder] mat[${i}] "${mat.name ?? ''}" transparent=${isTransparent} alphaTest=${alphaTestVal}${alphaInfo} → ${texInfo}`);
   }
   console.log(`[Encoder] テクスチャ数: ${texCount}/${matCount}`);
 
@@ -337,10 +350,26 @@ async function encodeTexture(mat) {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(img, 0, 0, w, h);
 
-    // 透過ありは PNG、それ以外は JPEG（ファイルサイズ優先）
-    const needsAlpha = mat.transparent || (mat.alphaTest ?? 0) > 0;
-    const mimeType   = needsAlpha ? 'image/png' : 'image/jpeg';
-    const texType    = needsAlpha ? TEX_TYPE_PNG : TEX_TYPE_JPEG;
+    // マテリアルフラグによる判定（通常の Three.js マテリアル）
+    let hasAlpha = (mat.transparent === true) || (mat.alphaTest ?? 0) > 0;
+
+    // MMDToonMaterial はカスタムシェーダーで alpha を処理するため
+    // transparent=false / alphaTest=0 のままでも PNG テクスチャにアルファがある場合がある。
+    // Canvas の実ピクセルをスキャンして透明ピクセルの有無を確認する。
+    if (!hasAlpha) {
+      try {
+        const imageData = ctx.getImageData(0, 0, w, h);
+        const pixels = imageData.data;          // RGBA の連続配列
+        for (let i = 3; i < pixels.length; i += 4) {
+          if (pixels[i] < 255) { hasAlpha = true; break; }
+        }
+      } catch (_) {
+        // tainted canvas 等でアクセス不可の場合はマテリアルフラグに従う
+      }
+    }
+
+    const mimeType = hasAlpha ? 'image/png' : 'image/jpeg';
+    const texType  = hasAlpha ? TEX_TYPE_PNG : TEX_TYPE_JPEG;
 
     const blob = await new Promise((resolve) =>
       canvas.toBlob(resolve, mimeType, 0.85)
@@ -348,7 +377,8 @@ async function encodeTexture(mat) {
     if (!blob) return null;
 
     const data = await blob.arrayBuffer();
-    return { type: texType, width: w, height: h, data };
+    // hasAlpha を返してマテリアル書き込み時に alphaTest を設定できるようにする
+    return { type: texType, width: w, height: h, data, hasAlpha };
   } catch (e) {
     console.warn('[Encoder] テクスチャエンコード失敗:', mat.name ?? '(unnamed)', e);
     return null;

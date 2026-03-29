@@ -240,7 +240,13 @@ async function buildMaterial(def) {
   if (def.texMeta) {
     try {
       const texture = await loadTextureFromBytes(def.texMeta);
-      mat.map        = texture;
+      mat.map = texture;
+      // PNG テクスチャで透過設定が未指定の場合は alphaTest を有効化する（安全対策）。
+      // encoder 側で hasAlpha 検出して alphaTest=0.5 を書き込むが、
+      // 旧データや edge case のフォールバックとして残す。
+      if (def.texMeta.type === 1 /* PNG */ && !def.transparent && def.alphaTest === 0) {
+        mat.alphaTest = 0.5;
+      }
       mat.needsUpdate = true;
     } catch (e) {
       console.warn('[Decoder] テクスチャロード失敗:', e);
