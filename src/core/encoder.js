@@ -338,67 +338,40 @@ async function encodeTexture(mat) {
   const texture = mat.map;
   if (!texture || !texture.image) return null;
 
-  const img = texture.image;
+  const img  = texture.image;
   // image が HTMLImageElement か ImageBitmap か確認
   const srcW = img.width  ?? img.naturalWidth;
   const srcH = img.height ?? img.naturalHeight;
   if (!srcW || !srcH) return null;
 
   try {
-    // 元のサイズをそのまま保持する
-    const w = srcW;
-    const h = srcH;
-
-    const canvas = document.createElement('canvas');
-    canvas.width  = w;
-    canvas.height = h;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0, w, h);
-
     // マテリアルフラグによる基本判定
     let hasAlpha = (mat.transparent === true) || (mat.alphaTest ?? 0) > 0;
 
+    // MMDToonMaterial はカスタムシェーダーで alpha を処理するため
+    // transparent=false / alphaTest=0 のままでもテクスチャにアルファがある場合がある。
+    // 縮小キャンバスで実ピクセルをスキャンして判定する（PNG/JPEG 問わず）。
     if (!hasAlpha) {
-      // ソース画像が PNG かを先頭バイトで確認する。
-      // JPEG はアルファチャンネルを持てないのでスキャン不要。
-      // PNG のみスキャン対象とする。
-      const srcIsPng = await detectSourceIsPng(img.src);
-
-      if (srcIsPng) {
-        // PNG ソースのみアルファピクセルをスキャンする。
-        // スキャン失敗（tainted canvas 等）やスキャンで検出できない場合でも
-        // PNG ソースは保守的に PNG として保存してアルファチャンネルを保護する。
-        try {
-          const imageData = ctx.getImageData(0, 0, w, h);
-          const pixels    = imageData.data;
-          for (let i = 3; i < pixels.length; i += 4) {
-            if (pixels[i] < 255) { hasAlpha = true; break; }
-          }
-          if (!hasAlpha) {
-            // 透明ピクセル未検出でも PNG ソースは PNG で保存
-            // （MMDToonMaterial の alpha はシェーダーで制御されるため canvas に現れない場合がある）
-            console.log(`[Encoder] PNG ソース・透明ピクセル未検出 → 保守的に PNG 保存: "${mat.name ?? ''}"`);
-            hasAlpha = true;
-          }
-        } catch (e) {
-          // tainted canvas など getImageData 不可の場合
-          console.warn(`[Encoder] アルファスキャン失敗・PNG として保存: "${mat.name ?? ''}"`, e);
-          hasAlpha = true;
-        }
-      }
-      // JPEG ソース: アルファ不可。hasAlpha=false のまま → JPEG として保存
+      hasAlpha = await hasRealAlphaPixels(img);
     }
 
     const mimeType = hasAlpha ? 'image/png' : 'image/jpeg';
     const texType  = hasAlpha ? TEX_TYPE_PNG : TEX_TYPE_JPEG;
 
+    // 保存用フルサイズ canvas に描画
+    const canvas = document.createElement('canvas');
+    canvas.width  = srcW;
+    canvas.height = srcH;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, srcW, srcH);
+
     const blob = await new Promise((resolve) =>
-      canvas.toBlob(resolve, mimeType, 0.85)
+      canvas.toBlob(resolve, mimeType, hasAlpha ? undefined : 0.92)
     );
     if (!blob) return null;
 
     const data = await blob.arrayBuffer();
-    return { type: texType, width: w, height: h, data, hasAlpha };
+    return { type: texType, width: srcW, height: srcH, data, hasAlpha };
   } catch (e) {
     console.warn('[Encoder] テクスチャエンコード失敗:', mat.name ?? '(unnamed)', e);
     return null;
@@ -406,27 +379,38 @@ async function encodeTexture(mat) {
 }
 
 /**
- * 画像 URL の先頭バイトを読んでソースが PNG かどうかを確認する。
- * JPEG はアルファを持てないためスキャン対象外とする判定に使用。
+ * 縮小キャンバスで実ピクセルを検査し、アルファが存在するか確認する。
  *
- * @param {string} src - 画像の URL (blob: / http: など)
- * @returns {Promise<boolean>} PNG なら true
+ * - 最大 128×128 に縮小してスキャンすることで大テクスチャのコストを抑える。
+ * - 閾値を 250 とすることで JPEG 圧縮ノイズによる誤検出を防ぐ。
+ * - getImageData に失敗した場合（CORS 等）は不透明扱いとして false を返す。
+ *
+ * @param {HTMLImageElement|ImageBitmap} image
+ * @returns {Promise<boolean>}
  */
-async function detectSourceIsPng(src) {
-  if (!src) return false;
+async function hasRealAlphaPixels(image) {
+  const w = Math.min(image.width  ?? image.naturalWidth  ?? 1, 128);
+  const h = Math.min(image.height ?? image.naturalHeight ?? 1, 128);
+
+  const canvas = document.createElement('canvas');
+  canvas.width  = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(image, 0, 0, w, h);
+
+  let imageData;
   try {
-    const response = await fetch(src);
-    const reader   = response.body.getReader();
-    const { value } = await reader.read();
-    reader.cancel().catch(() => {});
-    // PNG マジックバイト: 0x89 0x50 0x4E 0x47 (\x89PNG)
-    return (
-      value?.[0] === 0x89 && value?.[1] === 0x50 &&
-      value?.[2] === 0x4E && value?.[3] === 0x47
-    );
-  } catch (_) {
+    imageData = ctx.getImageData(0, 0, w, h);
+  } catch (e) {
+    console.warn('[Encoder] getImageData 失敗（CORS？）→ 不透明扱い:', e);
     return false;
   }
+
+  const data = imageData.data;
+  for (let i = 3; i < data.length; i += 4) {
+    if (data[i] < 250) return true;
+  }
+  return false;
 }
 
 // ============================================================
