@@ -15,6 +15,7 @@
 
 import { getState, subscribe } from '../data/state.js';
 import { renderToCanvas, toDataURL } from '../utils/qrcode.js';
+import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '../config.js';
 
 // ============================================================
 // 公開 API
@@ -164,6 +165,14 @@ async function runUploadFlow(container) {
     const key       = await generateKey();
     const keyBase64 = await exportKeyToBase64(key);
     const encBuf    = await encrypt(key, vmb1Buf);
+
+    const fileMB = encBuf.byteLength / 1024 / 1024;
+    console.log(`[DataPolicy] ファイルサイズ: ${fileMB.toFixed(1)} MB / 上限 ${MAX_FILE_SIZE_MB} MB → ${encBuf.byteLength > MAX_FILE_SIZE_BYTES ? 'NG' : 'OK'}`);
+    if (encBuf.byteLength > MAX_FILE_SIZE_BYTES) {
+      throw new Error(
+        `モデルデータが上限サイズ（${MAX_FILE_SIZE_MB}MB）を超えています。\nテクスチャ解像度を下げるか、別のモデルをお試しください。`
+      );
+    }
 
     setShareStatus(container, 'アップロード中...');
     const uuid         = crypto.randomUUID();
