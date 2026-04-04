@@ -17,9 +17,11 @@ CREATE POLICY "自分のモデルのみ参照" ON cards
     OR is_public = true     -- 公開カードは全員閲覧可能
   );
 
--- 3. UPDATE / DELETE ポリシー（Step3 で未作成の場合のみ実行）
-CREATE POLICY IF NOT EXISTS "自分のモデルのみ更新" ON cards
+-- 3. UPDATE / DELETE ポリシー（既存があれば DROP して再作成）
+DROP POLICY IF EXISTS "自分のモデルのみ更新" ON cards;
+CREATE POLICY "自分のモデルのみ更新" ON cards
   FOR UPDATE USING (auth.uid() = user_id);
 
-CREATE POLICY IF NOT EXISTS "自分のモデルのみ削除" ON cards
+DROP POLICY IF EXISTS "自分のモデルのみ削除" ON cards;
+CREATE POLICY "自分のモデルのみ削除" ON cards
   FOR DELETE USING (auth.uid() = user_id);
