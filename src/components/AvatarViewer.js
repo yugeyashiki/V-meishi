@@ -55,6 +55,9 @@ let usePhysics = false;
 // アップロード済み VMD の ArrayBuffer（エンコード時に参照）
 let vmdBuffer = null;
 
+// アップロード済み PMX の ArrayBuffer（エンコード時に参照）
+let pmxBuffer = null;
+
 // ============================================================
 // 公開 API
 // ============================================================
@@ -113,8 +116,9 @@ export async function loadModelFile(modelUrl, textureUrlMap, onProgress) {
   mesh.castShadow = true;
   scene.add(mesh);
 
-  // 新モデル読み込み時に前回のVMDバッファを破棄
+  // 新モデル読み込み時に前回のVMD/PMXバッファを破棄
   vmdBuffer = null;
+  pmxBuffer = null;
 
   // MMDAnimationHelper を生成・モデル登録
   helper = createHelper();
@@ -188,42 +192,81 @@ export async function loadFromVMB(vmbBuffer, onProgress) {
     mesh = null;
   }
 
-  const { mesh: decodedMesh, vmdBuffer } = await decodeMesh(vmbBuffer, onProgress);
+  const { mesh: decodedMesh, vmdBuffer: decodedVmd, pmxBuffer: decodedPmx } = await decodeMesh(vmbBuffer, onProgress);
   mesh = decodedMesh;
   scene.add(mesh);
 
-  if (vmdBuffer) {
-    console.log(`[Motion] VMDデータ検出: ${vmdBuffer.byteLength} bytes`);
+  if (decodedPmx && decodedVmd) {
+    // PMXバイナリをMMDLoaderで再読み込みし、メッシュを差し替えてからVMDを適用する。
+    // VMB1デコード済みメッシュは mesh.geometry.userData.MMD が存在しないため
+    // MMDAnimationHelper が IK/物理演算に必要なメタデータを参照できない。
+    // MMDLoaderで再読み込みすることで userData.MMD を取得できる。
+    console.log(`[Motion] PMX再読み込み開始: ${(decodedPmx.byteLength / 1024).toFixed(1)} KB`);
 
-    // VMB1デコード済みメッシュはMMDメタデータを持たないため
-    // loadMotion()（remove→re-add）は使わず2段階に分ける:
-    //   1. physics のみで登録
-    //   2. loadAnimation 完了後に animation のみ追加
-    console.log('[Debug] mesh.geometry:', mesh.geometry);
-    console.log('[Debug] mesh.geometry.userData:', mesh.geometry.userData);
-    console.log('[Debug] mesh.userData:', mesh.userData);
+    // テクスチャファイルが存在しないため、全テクスチャを 1x1 白 PNG で代替し、
+    // ロード後にデコード済みメッシュのテクスチャをマテリアルインデックスでコピーする。
+    const BLANK_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    const manager  = new THREE.LoadingManager();
+    manager.setURLModifier((url) => {
+      if (url.startsWith('blob:') || url.startsWith('data:')) return url;
+      return BLANK_PNG;
+    });
 
-    helper = createHelper();
-    helper.add(mesh, { physics: true });
+    const pmxUrl = URL.createObjectURL(new Blob([decodedPmx]));
 
-    const vmdUrl = URL.createObjectURL(new Blob([vmdBuffer]));
-    new MMDLoader().loadAnimation(
-      vmdUrl,
-      mesh,
-      (vmd) => {
-        helper.add(mesh, { animation: vmd });
-        console.log('[Motion] モーション適用完了');
-        console.log('[Motion] 再生開始');
-        URL.revokeObjectURL(vmdUrl);
+    new MMDLoader(manager).load(
+      pmxUrl,
+      (pmxMesh) => {
+        URL.revokeObjectURL(pmxUrl);
+
+        // テクスチャをデコード済みメッシュからコピー（マテリアルインデックスで対応）
+        const srcMats = Array.isArray(decodedMesh.material) ? decodedMesh.material : [decodedMesh.material];
+        const dstMats = Array.isArray(pmxMesh.material)    ? pmxMesh.material    : [pmxMesh.material];
+        dstMats.forEach((dst, i) => {
+          if (srcMats[i]?.map) {
+            dst.map = srcMats[i].map;
+            dst.needsUpdate = true;
+          }
+        });
+
+        // シーン内の仮メッシュを PMX メッシュで差し替え
+        scene.remove(mesh);
+        mesh = pmxMesh;
+        mesh.castShadow = true;
+        scene.add(mesh);
+
+        // MMDAnimationHelper でモーション適用
+        helper = createHelper();
+        helper.add(mesh, { physics: usePhysics });
+
+        const vmdUrl = URL.createObjectURL(new Blob([decodedVmd]));
+        new MMDLoader().loadAnimation(
+          vmdUrl,
+          mesh,
+          (vmd) => {
+            helper.add(mesh, { animation: vmd });
+            console.log('[Motion] モーション適用完了');
+            URL.revokeObjectURL(vmdUrl);
+          },
+          null,
+          (err) => {
+            console.error('[Motion] VMD読み込み失敗:', err);
+            URL.revokeObjectURL(vmdUrl);
+          },
+        );
+
+        console.log('[Motion] PMXメッシュ差し替え完了');
       },
       null,
       (err) => {
-        console.error('[Motion] VMD読み込み失敗:', err);
-        URL.revokeObjectURL(vmdUrl);
+        URL.revokeObjectURL(pmxUrl);
+        console.error('[Motion] PMX再読み込み失敗 → 静止表示継続:', err);
       },
     );
+  } else if (decodedVmd) {
+    console.warn('[Motion] PMXバッファなし → モーション適用スキップ（静止表示）');
   }
-  // vmdBuffer=null の場合は helper=null のまま → 静止表示
+  // decodedVmd=null の場合は helper=null のまま → 静止表示
 }
 
 /**
@@ -248,6 +291,22 @@ export function setVmdBuffer(buf) {
  */
 export function getVmdBuffer() {
   return vmdBuffer;
+}
+
+/**
+ * アップロードされた PMX の ArrayBuffer を保存する
+ * @param {ArrayBuffer} buf
+ */
+export function setPmxBuffer(buf) {
+  pmxBuffer = buf;
+}
+
+/**
+ * 保存済み PMX バッファを返す（エンコード用）
+ * @returns {ArrayBuffer|null}
+ */
+export function getPmxBuffer() {
+  return pmxBuffer;
 }
 
 /**

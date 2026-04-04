@@ -59,13 +59,15 @@
  *   texDataSize   : uint32
  *   texData       : texDataSize bytes
  *
+ * [PMXセクション] ← encodeMesh() に pmxBuffer を渡したときのみ追記（VMDセクションより前）
+ *   hasPmx        : uint8   (0=PMXなし / 1=PMXあり)
+ *   pmxSize       : uint32  (hasPmx=1 のときのみ存在)
+ *   pmxData       : pmxSize bytes (hasPmx=1 のときのみ存在)
+ *
  * [VMDセクション] ← encodeMesh() に vmdBuffer を渡したときのみ追記
  *   hasVmd        : uint8   (0=VMDなし / 1=VMDあり)
  *   vmdSize       : uint32  (hasVmd=1 のときのみ存在)
  *   vmdData       : vmdSize bytes (hasVmd=1 のときのみ存在)
- *
- * ※ 後方互換: hasVmd=0 の場合はテクスチャセクションで読み終わるため
- *   旧デコーダー / 旧共有URLに影響なし
  */
 
 import * as THREE from 'three';
@@ -90,9 +92,10 @@ const TEX_TYPE_PNG  = 1;
  *
  * @param {THREE.SkinnedMesh}  mesh       - MMDLoader でロード済みのメッシュ
  * @param {ArrayBuffer|null}   [vmdBuffer] - VMD ファイルの ArrayBuffer（省略可）
+ * @param {ArrayBuffer|null}   [pmxBuffer] - PMX ファイルの ArrayBuffer（省略可）
  * @returns {Promise<ArrayBuffer>}  VMB1 フォーマットのバイナリ
  */
-export async function encodeMesh(mesh, vmdBuffer = null) {
+export async function encodeMesh(mesh, vmdBuffer = null, pmxBuffer = null) {
   const geo       = mesh.geometry;
   const skeleton  = mesh.skeleton;
   const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
@@ -277,6 +280,17 @@ export async function encodeMesh(mesh, vmdBuffer = null) {
     w.writeUint16(tex.height);
     w.writeUint32(tex.data.byteLength);
     w.writeBytes(tex.data);
+  }
+
+  // PMXセクション（オプション・VMDセクションより前）
+  if (pmxBuffer) {
+    const pmxBytes = new Uint8Array(pmxBuffer);
+    w.writeUint8(1);                    // hasPmx = 1
+    w.writeUint32(pmxBytes.byteLength); // pmxSize
+    w.writeBytes(pmxBytes);             // pmxData
+    console.log(`[Encoder] PMXセクション追記: ${(pmxBytes.byteLength / 1024).toFixed(1)} KB`);
+  } else {
+    w.writeUint8(0);                    // hasPmx = 0
   }
 
   // VMDセクション（オプション）

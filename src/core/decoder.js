@@ -30,7 +30,7 @@ import { validateVMB } from './encoder.js';
  *
  * @param {ArrayBuffer} buffer     - decrypt() の返り値（VMB1 形式）
  * @param {Function}    [onProgress] - (percent: 0-100) => void
- * @returns {Promise<THREE.SkinnedMesh>}
+ * @returns {Promise<{ mesh: THREE.SkinnedMesh, vmdBuffer: ArrayBuffer|null, pmxBuffer: ArrayBuffer|null }>}
  * @throws {Error} フォーマット不正 / 復元失敗時
  */
 export async function decodeMesh(buffer, onProgress) {
@@ -145,7 +145,18 @@ export async function decodeMesh(buffer, onProgress) {
 
   console.log(`[Decoder] マテリアル=${matCount} テクスチャ=${texCount}`);
 
-  // VMDセクション（旧VMB1ファイルは末尾バイトなし → remaining=0 でスキップ）
+  // PMXセクション（VMDセクションより前。旧ファイルは remaining=0 でスキップ）
+  let pmxBuffer = null;
+  if (r.remaining >= 1) {
+    const hasPmx = r.readUint8();
+    if (hasPmx === 1 && r.remaining >= 4) {
+      const pmxSize = r.readUint32();
+      console.log(`[Decoder] PMXサイズ: ${pmxSize} bytes`);
+      pmxBuffer = r.readBytes(pmxSize);
+    }
+  }
+
+  // VMDセクション
   let vmdBuffer = null;
   if (r.remaining >= 1) {
     const hasVmd = r.readUint8();
@@ -225,7 +236,7 @@ export async function decodeMesh(buffer, onProgress) {
 
   report(100);
   console.log('[Decoder] デコード完了');
-  return { mesh: decodedMesh, vmdBuffer };
+  return { mesh: decodedMesh, vmdBuffer, pmxBuffer };
 }
 
 // ============================================================

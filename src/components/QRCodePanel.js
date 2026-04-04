@@ -139,7 +139,7 @@ function bindShareButton(container) {
 async function runUploadFlow(container) {
   // 動的インポートでバンドルサイズを最小化
   const [
-    { getMesh, getVmdBuffer },
+    { getMesh, getVmdBuffer, getPmxBuffer },
     { encodeMesh },
     { generateKey, exportKeyToBase64, encrypt },
     { uploadModel, saveCard, getCardCount, MAX_CARDS },
@@ -176,9 +176,13 @@ async function runUploadFlow(container) {
   try {
     setShareStatus(container, 'エンコード中...');
     const vmdBuf  = getVmdBuffer();
-    const vmb1Buf = await encodeMesh(mesh, vmdBuf);
+    const pmxBuf  = getPmxBuffer();
+    const vmb1Buf = await encodeMesh(mesh, vmdBuf, pmxBuf);
     if (vmdBuf) {
       console.log(`[Motion] VMDエンコード完了: ${(vmdBuf.byteLength / 1024).toFixed(1)} KB`);
+    }
+    if (pmxBuf) {
+      console.log(`[Motion] PMXエンコード完了: ${(pmxBuf.byteLength / 1024).toFixed(1)} KB`);
     }
 
     setShareStatus(container, '暗号化中...');

@@ -252,6 +252,10 @@ async function handlePmxFiles(files, container) {
 
   const pmxUrl = createObjectUrl(pmxFile);
 
+  // PMX バイナリを保存（エンコード時にVMB1へ埋め込む）
+  const pmxArrayBuffer = await pmxFile.arrayBuffer();
+  AvatarViewer.setPmxBuffer(pmxArrayBuffer);
+
   // プログレス表示開始
   showProgress(container, true);
   updateProgress(container, 0, `${pmxFile.name} を読み込み中...`);
