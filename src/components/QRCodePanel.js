@@ -16,6 +16,7 @@
 import { getState, subscribe } from '../data/state.js';
 import { renderToCanvas, toDataURL } from '../utils/qrcode.js';
 import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '../config.js';
+import { getCurrentUser } from '../auth.js';
 
 // ============================================================
 // 公開 API
@@ -148,6 +149,14 @@ async function runUploadFlow(container) {
     import('../core/crypto.js'),
     import('../core/supabase.js'),
   ]);
+
+  // ログインチェック
+  const user = await getCurrentUser();
+  if (!user) {
+    showShareError(container, 'QRコードを生成するにはログインが必要です。\n画面上部のGoogleログインボタンからログインしてください。');
+    return;
+  }
+  console.log('[Auth] 作成者:', user.email ?? user.id);
 
   const mesh = getMesh();
   if (!mesh) {

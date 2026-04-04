@@ -9,6 +9,7 @@
  */
 
 import * as AvatarViewer from './AvatarViewer.js';
+import { getCurrentUser } from '../auth.js';
 
 // 物理演算トグルの現在値（Ammo.js 読み込み成否に依存するため init 後に取得）
 let physicsEnabled = true;
@@ -207,6 +208,14 @@ async function traverseEntry(entry, result) {
 
 async function handlePmxFiles(files, container) {
   const statusEl = container.querySelector('#pmx-status');
+
+  // ログインチェック
+  const user = await getCurrentUser();
+  if (!user) {
+    alert('名刺を作成するにはログインが必要です。\n画面上部のGoogleログインボタンからログインしてください。');
+    return;
+  }
+  console.log('[Auth] 作成者:', user.email ?? user.id);
 
   // PMX ファイルを探す
   const pmxFiles = files.filter((f) => f.name.toLowerCase().endsWith('.pmx'));
