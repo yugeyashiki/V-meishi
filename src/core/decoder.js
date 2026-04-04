@@ -145,14 +145,15 @@ export async function decodeMesh(buffer, onProgress) {
 
   console.log(`[Decoder] マテリアル=${matCount} テクスチャ=${texCount}`);
 
-  // VMDセクション確認（デバッグログ）
-  // 旧VMB1ファイルは末尾バイトなし → remaining=0 でスキップ
+  // VMDセクション（旧VMB1ファイルは末尾バイトなし → remaining=0 でスキップ）
+  let vmdBuffer = null;
   if (r.remaining >= 1) {
     const hasVmd = r.readUint8();
     console.log(`[Decoder] hasVmd: ${hasVmd}`);
     if (hasVmd === 1 && r.remaining >= 4) {
       const vmdSize = r.readUint32();
       console.log(`[Decoder] VMDサイズ: ${vmdSize} bytes`);
+      vmdBuffer = r.readBytes(vmdSize);
     }
   }
 
@@ -224,7 +225,7 @@ export async function decodeMesh(buffer, onProgress) {
 
   report(100);
   console.log('[Decoder] デコード完了');
-  return decodedMesh;
+  return { mesh: decodedMesh, vmdBuffer };
 }
 
 // ============================================================

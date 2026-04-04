@@ -188,11 +188,24 @@ export async function loadFromVMB(vmbBuffer, onProgress) {
     mesh = null;
   }
 
-  mesh = await decodeMesh(vmbBuffer, onProgress);
+  const { mesh: decodedMesh, vmdBuffer } = await decodeMesh(vmbBuffer, onProgress);
+  mesh = decodedMesh;
   scene.add(mesh);
 
-  // VMB1 由来のメッシュはモーション・物理データを持たないため
-  // MMDAnimationHelper は生成しない（helper = null のまま）
+  if (vmdBuffer) {
+    console.log(`[Motion] VMDデータ検出: ${vmdBuffer.byteLength} bytes`);
+    // loadModelFile と同じフローでモーションを適用する:
+    //   create helper → physics のみで add → loadMotion（内部で remove+animation 付き re-add）
+    helper = createHelper();
+    helper.add(mesh, { physics: usePhysics });
+    const vmdUrl = URL.createObjectURL(new Blob([vmdBuffer]));
+    try {
+      await loadMotion({ helper, mesh, motionUrl: vmdUrl, usePhysics });
+    } finally {
+      URL.revokeObjectURL(vmdUrl);
+    }
+  }
+  // vmdBuffer=null の場合は helper=null のまま → 静止表示
 }
 
 /**
