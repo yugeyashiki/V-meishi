@@ -252,9 +252,8 @@ async function handlePmxFiles(files, container) {
 
   const pmxUrl = createObjectUrl(pmxFile);
 
-  // PMX バイナリを保存（エンコード時にVMB1へ埋め込む）
+  // PMX バイナリを先読みしておく（loadModelFile 完了後に setPmxBuffer する）
   const pmxArrayBuffer = await pmxFile.arrayBuffer();
-  AvatarViewer.setPmxBuffer(pmxArrayBuffer);
 
   // プログレス表示開始
   showProgress(container, true);
@@ -264,6 +263,10 @@ async function handlePmxFiles(files, container) {
     await AvatarViewer.loadModelFile(pmxUrl, textureUrlMap, (percent) => {
       updateProgress(container, percent, `${pmxFile.name} を読み込み中... ${percent}%`);
     });
+
+    // loadModelFile 内で pmxBuffer がリセットされるため、完了後にセットする
+    AvatarViewer.setPmxBuffer(pmxArrayBuffer);
+    console.log('[FileUploader] PMXバッファ保存:', pmxArrayBuffer.byteLength, 'bytes');
 
     updateProgress(container, 100, '✅ 読み込み完了');
     setTimeout(() => showProgress(container, false), 1200);
