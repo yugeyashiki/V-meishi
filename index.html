@@ -20,6 +20,21 @@
   <nav class="app-nav" id="app-nav">
     <button class="app-nav__tab active" data-mode="create">名刺を作る</button>
     <button class="app-nav__tab" data-mode="receive">名刺を受け取る</button>
+
+    <!-- 認証ウィジェット -->
+    <div id="auth-widget" class="auth-widget">
+      <!-- 未ログイン時 -->
+      <div id="auth-guest" class="auth-guest">
+        <button type="button" id="btn-login-google" class="auth-btn auth-btn--google">G ログイン</button>
+        <button type="button" id="btn-login-x"      class="auth-btn auth-btn--x">𝕏 ログイン</button>
+      </div>
+      <!-- ログイン済み -->
+      <div id="auth-user" class="auth-user hidden">
+        <img id="auth-avatar" class="auth-avatar" src="" alt="" width="28" height="28">
+        <span id="auth-name" class="auth-name"></span>
+        <button type="button" id="btn-logout" class="auth-btn auth-btn--logout">ログアウト</button>
+      </div>
+    </div>
   </nav>
 
   <!-- ========================================

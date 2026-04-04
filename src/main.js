@@ -12,6 +12,7 @@ import { init as initQRCodePanel, refresh as refreshQR } from './components/QRCo
 import { init as initReceivePanel } from './components/ReceivePanel.js';
 import { exportCard } from './core/exporter.js';
 import { getState } from './data/state.js';
+import { signInWithGoogle, signInWithX, signOut, getCurrentUser, onAuthStateChange } from './auth.js';
 
 // AvatarViewer（Three.js シーン）初期化
 const canvas = document.getElementById('avatar-canvas');
@@ -67,6 +68,52 @@ if (receiveMode) {
 document.getElementById('btn-export-json')?.addEventListener('click', () => {
   exportCard(getState());
 });
+
+// ============================================================
+// 認証ウィジェット
+// ============================================================
+
+function updateAuthUI(user) {
+  const guestEl  = document.getElementById('auth-guest');
+  const userEl   = document.getElementById('auth-user');
+  const nameEl   = document.getElementById('auth-name');
+  const avatarEl = document.getElementById('auth-avatar');
+
+  if (user) {
+    const displayName = user.user_metadata?.full_name
+      ?? user.user_metadata?.name
+      ?? user.email
+      ?? user.id.slice(0, 8);
+    const avatarUrl = user.user_metadata?.avatar_url ?? '';
+
+    if (nameEl)   nameEl.textContent = displayName;
+    if (avatarEl) {
+      avatarEl.src = avatarUrl;
+      avatarEl.style.display = avatarUrl ? '' : 'none';
+    }
+    guestEl?.classList.add('hidden');
+    userEl?.classList.remove('hidden');
+    console.log(`[Auth] ログイン済み: ${user.email ?? user.id}`);
+  } else {
+    guestEl?.classList.remove('hidden');
+    userEl?.classList.add('hidden');
+    console.log('[Auth] 未ログイン（ゲスト）');
+  }
+}
+
+// ボタンイベント
+document.getElementById('btn-login-google')?.addEventListener('click', () => signInWithGoogle());
+document.getElementById('btn-login-x')?.addEventListener('click',      () => signInWithX());
+document.getElementById('btn-logout')?.addEventListener('click', async () => {
+  await signOut();
+  console.log('[Auth] ログアウト済み');
+});
+
+// 初期状態を確認
+getCurrentUser().then(updateAuthUI);
+
+// 認証状態変化を監視
+onAuthStateChange(updateAuthUI);
 
 // ============================================================
 // 開発時: Supabase 接続確認（Step 14）+ エンコードテスト（Step 15）

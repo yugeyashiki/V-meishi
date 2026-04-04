@@ -1496,3 +1496,69 @@ img, canvas {
     min-width: 180px;
   }
 }
+
+/* ============================================================
+   15. 認証ウィジェット（ナビ右端）
+   ============================================================ */
+.auth-widget {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  flex-shrink: 0;
+}
+
+.auth-guest {
+  display: flex;
+  gap: 6px;
+}
+
+.auth-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-user.hidden,
+.auth-guest.hidden {
+  display: none;
+}
+
+.auth-avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--ui-surface);
+}
+
+.auth-name {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 50px;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--ui-surface);
+  color: rgba(255, 255, 255, 0.8);
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.auth-btn:hover {
+  opacity: 0.75;
+}
+
+.auth-btn--logout {
+  background: none;
+  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.5);
+}
