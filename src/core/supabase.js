@@ -37,6 +37,9 @@ const BUCKET          = 'model-data';
 const MODEL_PATH_PREFIX = 'models';
 const APP_VERSION     = '0.4.0';
 
+/** 1アカウントあたりの名刺作成上限 */
+export const MAX_CARDS = 3;
+
 /** このサイズを超えた場合に警告を返す */
 const SIZE_WARN_BYTES = 20 * 1024 * 1024; // 20MB
 
@@ -130,6 +133,8 @@ export async function downloadModel(storagePath) {
 export async function saveCard({ uuid, state, keyBase64, modelStoragePath, motionStoragePath = null }) {
   const { profile, links, theme, avatar } = state;
 
+  const { data: { user } } = await supabase.auth.getUser();
+
   const row = {
     id:                  uuid,
     name:                profile.name         || '(名前なし)',
@@ -143,6 +148,7 @@ export async function saveCard({ uuid, state, keyBase64, modelStoragePath, motio
     encryption_key:      keyBase64,
     motion_storage_path: motionStoragePath,
     app_version:         APP_VERSION,
+    user_id:             user?.id ?? null,
   };
 
   const { error } = await supabase
@@ -225,6 +231,32 @@ export async function deleteCard(uuid) {
   if (dbErr) throw new Error(`[Supabase] DB 削除失敗: ${dbErr.message}`);
 
   console.log(`[Supabase] カード削除完了: uuid=${uuid}`);
+}
+
+// ============================================================
+// 名刺枚数チェック
+// ============================================================
+
+/**
+ * 指定ユーザーの作成済み名刺枚数を取得し、上限チェックを行う
+ *
+ * @param {string} userId - auth.users の UUID
+ * @returns {Promise<{ count: number, overLimit: boolean }>}
+ */
+export async function getCardCount(userId) {
+  const { count, error } = await supabase
+    .from('cards')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId);
+
+  if (error) {
+    console.warn('[Supabase] 名刺枚数取得失敗:', error.message);
+    return { count: 0, overLimit: false };
+  }
+
+  const overLimit = count >= MAX_CARDS;
+  console.log(`[DataPolicy] 名刺枚数: ${count} / ${MAX_CARDS}`);
+  return { count, overLimit };
 }
 
 // ============================================================

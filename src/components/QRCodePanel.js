@@ -142,7 +142,7 @@ async function runUploadFlow(container) {
     { getMesh },
     { encodeMesh },
     { generateKey, exportKeyToBase64, encrypt },
-    { uploadModel, saveCard },
+    { uploadModel, saveCard, getCardCount, MAX_CARDS },
   ] = await Promise.all([
     import('./AvatarViewer.js'),
     import('../core/encoder.js'),
@@ -157,6 +157,13 @@ async function runUploadFlow(container) {
     return;
   }
   console.log('[Auth] 作成者:', user.email ?? user.id);
+
+  // 枚数チェック
+  const { overLimit } = await getCardCount(user.id);
+  if (overLimit) {
+    showShareError(container, `名刺は${MAX_CARDS}枚まで作成できます。\n管理画面から不要な名刺を削除してから再度お試しください。`);
+    return;
+  }
 
   const mesh = getMesh();
   if (!mesh) {
