@@ -283,13 +283,17 @@ export async function encodeMesh(mesh, vmdBuffer = null, pmxBuffer = null) {
   }
 
   // PMXセクション（オプション・VMDセクションより前）
+  console.log('[Encoder] PMXバイナリサイズ:', pmxBuffer?.byteLength);
   if (pmxBuffer) {
     const pmxBytes = new Uint8Array(pmxBuffer);
+    console.log('[Encoder] hasPmxフラグ: 1');
+    console.log('[Encoder] PMX書き込みサイズ:', pmxBytes.byteLength);
     w.writeUint8(1);                    // hasPmx = 1
     w.writeUint32(pmxBytes.byteLength); // pmxSize
     w.writeBytes(pmxBytes);             // pmxData
     console.log(`[Encoder] PMXセクション追記: ${(pmxBytes.byteLength / 1024).toFixed(1)} KB`);
   } else {
+    console.log('[Encoder] hasPmxフラグ: 0 (pmxBuffer なし)');
     w.writeUint8(0);                    // hasPmx = 0
   }
 

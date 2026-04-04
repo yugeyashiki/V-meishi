@@ -177,6 +177,8 @@ async function runUploadFlow(container) {
     setShareStatus(container, 'エンコード中...');
     const vmdBuf  = getVmdBuffer();
     const pmxBuf  = getPmxBuffer();
+    console.log('[QRPanel] getPmxBuffer():', pmxBuf?.byteLength ?? 'null');
+    console.log('[QRPanel] getVmdBuffer():', vmdBuf?.byteLength ?? 'null');
     const vmb1Buf = await encodeMesh(mesh, vmdBuf, pmxBuf);
     if (vmdBuf) {
       console.log(`[Motion] VMDエンコード完了: ${(vmdBuf.byteLength / 1024).toFixed(1)} KB`);
