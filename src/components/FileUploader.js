@@ -314,6 +314,7 @@ async function handleVmdFile(file, container) {
   }
 
   const vmdUrl = createObjectUrl(file);
+  console.log(`[Motion] VMDファイル選択: ${file.name}`);
 
   try {
     await AvatarViewer.loadMotionFile(vmdUrl);

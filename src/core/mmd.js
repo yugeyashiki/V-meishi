@@ -158,6 +158,8 @@ export function loadMotion({ helper, mesh, motionUrl, usePhysics }) {
         // loadModelFile で physics のみで登録済みのため、一度削除してから animation 付きで再登録
         helper.remove(mesh);
         helper.add(mesh, { animation, physics: usePhysics });
+        console.log('[Motion] モーション適用完了');
+        console.log('[Motion] 再生開始');
         resolve();
       },
       null,
