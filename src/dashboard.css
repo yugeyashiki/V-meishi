@@ -1,0 +1,406 @@
+/* ============================================================
+   dashboard.css - 管理画面（dashboard/index.html）専用スタイル
+   ============================================================ */
+
+body.dashboard-page {
+  min-height: 100vh;
+  background: var(--ui-bg, #0D0D0D);
+  color: #fff;
+}
+
+/* ============================================================
+   ヘッダー
+   ============================================================ */
+.db-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #111;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.db-header__back {
+  font-size: 13px;
+  color: rgba(255,255,255,0.55);
+  text-decoration: none;
+  transition: color 0.2s;
+  white-space: nowrap;
+}
+
+.db-header__back:hover {
+  color: #fff;
+}
+
+.db-header__title {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.db-header__spacer {
+  flex: 0 0 80px; /* back リンクと対称に */
+}
+
+/* ============================================================
+   ローディング
+   ============================================================ */
+.db-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 40vh;
+  color: rgba(255,255,255,0.5);
+}
+
+.db-loading.hidden { display: none; }
+
+.db-loading__spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #444;
+  border-top-color: var(--accent-color, #9B59B6);
+  border-radius: 50%;
+  animation: db-spin 0.8s linear infinite;
+}
+
+@keyframes db-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+   未ログイン / 空の状態
+   ============================================================ */
+.db-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 60px 16px;
+  text-align: center;
+}
+
+.db-message.hidden { display: none; }
+
+.db-message__text {
+  font-size: 16px;
+  color: rgba(255,255,255,0.6);
+}
+
+.db-message__btn {
+  text-decoration: none;
+}
+
+/* ============================================================
+   メインエリア
+   ============================================================ */
+.db-main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+}
+
+.db-main.hidden { display: none; }
+
+.db-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.db-count {
+  font-size: 13px;
+  color: rgba(255,255,255,0.5);
+}
+
+.db-create-btn {
+  text-decoration: none;
+  font-size: 14px;
+  padding: 10px 20px;
+}
+
+/* ============================================================
+   名刺カードリスト
+   ============================================================ */
+.db-card-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.db-card-item {
+  background: var(--ui-surface, #2a2a2a);
+  border: 1px solid var(--ui-border, #3a3a3a);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.db-card-item__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.db-card-item__name {
+  font-size: 15px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.db-card-item__date {
+  font-size: 12px;
+  color: rgba(255,255,255,0.4);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.db-card-item__url-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.db-card-item__url {
+  font-size: 12px;
+  color: rgba(255,255,255,0.45);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.db-btn-icon {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 4px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.db-btn-icon:hover { opacity: 1; }
+
+.db-card-item__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.db-card-item__actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ============================================================
+   公開/非公開トグル
+   ============================================================ */
+.db-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.db-public-toggle {
+  display: none;
+}
+
+.db-toggle-track {
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  background: #555;
+  border-radius: 10px;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.db-toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.db-public-toggle:checked + .db-toggle-track {
+  background: var(--accent-color, #9B59B6);
+}
+
+.db-public-toggle:checked + .db-toggle-track::after {
+  transform: translateX(16px);
+}
+
+.db-toggle-text {
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+  min-width: 32px;
+}
+
+/* ============================================================
+   ボタン（サイズ小）
+   ============================================================ */
+.db-btn-sm {
+  padding: 6px 14px;
+  font-size: 12px;
+}
+
+.db-btn-danger {
+  color: #ff6b6b;
+  border-color: rgba(255,107,107,0.3);
+}
+
+.db-btn-danger:hover {
+  background: rgba(255,107,107,0.1);
+}
+
+/* ============================================================
+   空の状態
+   ============================================================ */
+.db-empty {
+  text-align: center;
+  padding: 40px 16px;
+  color: rgba(255,255,255,0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.db-empty.hidden { display: none; }
+
+.db-empty a {
+  text-decoration: none;
+}
+
+/* ============================================================
+   編集モーダル
+   ============================================================ */
+.db-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.db-modal.hidden { display: none; }
+
+.db-modal__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+}
+
+.db-modal__body {
+  position: relative;
+  background: #1e1e1e;
+  border: 1px solid var(--ui-border, #3a3a3a);
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.db-modal__title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.db-modal__actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* ============================================================
+   フォーム要素
+   ============================================================ */
+.db-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.db-form-group--row {
+  flex-direction: row;
+  gap: 20px;
+}
+
+.db-form-label {
+  font-size: 12px;
+  color: rgba(255,255,255,0.55);
+  font-weight: 600;
+}
+
+.db-form-input {
+  background: var(--ui-surface, #2a2a2a);
+  border: 1px solid var(--ui-border, #3a3a3a);
+  border-radius: 8px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.db-form-input:focus {
+  border-color: var(--accent-color, #9B59B6);
+}
+
+.db-form-color {
+  width: 48px;
+  height: 36px;
+  border: 1px solid var(--ui-border, #3a3a3a);
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.db-form-note {
+  font-size: 11px;
+  color: rgba(255,255,255,0.35);
+  line-height: 1.5;
+}
+
+.db-form-error {
+  font-size: 12px;
+  color: #ff6b6b;
+}
+
+.db-form-error.hidden { display: none; }

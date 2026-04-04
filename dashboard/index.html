@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0D0D0D">
+  <title>マイ名刺 - V名刺</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css">
+  <link rel="stylesheet" href="/src/dashboard.css">
+</head>
+<body class="dashboard-page">
+
+  <!-- ヘッダー -->
+  <header class="db-header">
+    <a href="/" class="db-header__back">← トップへ戻る</a>
+    <h1 class="db-header__title">マイ名刺</h1>
+    <div class="db-header__spacer"></div>
+  </header>
+
+  <!-- ローディング -->
+  <div id="db-loading" class="db-loading">
+    <div class="db-loading__spinner"></div>
+    <p>読み込み中...</p>
+  </div>
+
+  <!-- 未ログイン -->
+  <div id="db-unauth" class="db-message hidden">
+    <p class="db-message__text">ログインが必要です</p>
+    <a href="/" class="btn-primary db-message__btn">トップページへ</a>
+  </div>
+
+  <!-- 名刺一覧 -->
+  <main id="db-main" class="db-main hidden">
+    <div class="db-toolbar">
+      <p id="db-count" class="db-count"></p>
+      <a href="/" class="btn-primary db-create-btn">＋ 新しい名刺を作る</a>
+    </div>
+
+    <!-- カードリスト -->
+    <ul id="db-card-list" class="db-card-list"></ul>
+
+    <!-- 空の場合 -->
+    <div id="db-empty" class="db-empty hidden">
+      <p>まだ名刺がありません。</p>
+      <a href="/" class="btn-primary">名刺を作る</a>
+    </div>
+  </main>
+
+  <!-- 編集モーダル -->
+  <div id="db-edit-modal" class="db-modal hidden">
+    <div class="db-modal__overlay" id="db-modal-overlay"></div>
+    <div class="db-modal__body">
+      <h2 class="db-modal__title">名刺を編集</h2>
+      <input type="hidden" id="edit-uuid">
+
+      <div class="db-form-group">
+        <label class="db-form-label">名前</label>
+        <input type="text" id="edit-name" class="db-form-input" maxlength="50">
+      </div>
+      <div class="db-form-group">
+        <label class="db-form-label">キャッチコピー</label>
+        <input type="text" id="edit-catchphrase" class="db-form-input" maxlength="100">
+      </div>
+      <div class="db-form-group">
+        <label class="db-form-label">所属・グループ</label>
+        <input type="text" id="edit-organization" class="db-form-input" maxlength="80">
+      </div>
+      <div class="db-form-group">
+        <label class="db-form-label">ジャンル</label>
+        <input type="text" id="edit-genre" class="db-form-input" maxlength="40">
+      </div>
+      <div class="db-form-group db-form-group--row">
+        <div>
+          <label class="db-form-label">背景色</label>
+          <input type="color" id="edit-bg-color" class="db-form-color">
+        </div>
+        <div>
+          <label class="db-form-label">アクセントカラー</label>
+          <input type="color" id="edit-accent-color" class="db-form-color">
+        </div>
+      </div>
+
+      <p class="db-form-note">※ SNSリンクの編集はトップページから再アップロードして行ってください</p>
+
+      <div class="db-modal__actions">
+        <button type="button" id="btn-edit-cancel" class="btn-secondary">キャンセル</button>
+        <button type="button" id="btn-edit-save"   class="btn-primary">保存</button>
+      </div>
+      <p id="edit-error" class="db-form-error hidden"></p>
+    </div>
+  </div>
+
+  <script type="module" src="/src/dashboard.js"></script>
+</body>
+</html>

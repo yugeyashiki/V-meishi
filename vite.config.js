@@ -13,8 +13,9 @@ export default defineConfig({
     rollupOptions: {
       // マルチページアプリ: トップ画面 + 閲覧専用ページ
       input: {
-        main: resolve(__dirname, 'index.html'),
-        card: resolve(__dirname, 'card/index.html'),
+        main:      resolve(__dirname, 'index.html'),
+        card:      resolve(__dirname, 'card/index.html'),
+        dashboard: resolve(__dirname, 'dashboard/index.html'),
       },
     },
   },

@@ -260,6 +260,61 @@ export async function getCardCount(userId) {
 }
 
 // ============================================================
+// 管理画面用: 自分のカード一覧・更新・公開切り替え
+// ============================================================
+
+/**
+ * ログインユーザーの名刺一覧を取得する
+ *
+ * @param {string} userId
+ * @returns {Promise<Array>}
+ */
+export async function getMyCards(userId) {
+  const { data, error } = await supabase
+    .from('cards')
+    .select('id, name, catchphrase, organization, genre, links, theme, created_at, is_public')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error(`[Supabase] カード一覧取得失敗: ${error.message}`);
+  return data ?? [];
+}
+
+/**
+ * 名刺のプロフィール・テーマ情報を更新する（モデル自体は変更しない）
+ *
+ * @param {string} uuid
+ * @param {{ name, catchphrase, organization, genre, links, theme }} meta
+ * @returns {Promise<void>}
+ */
+export async function updateCardMeta(uuid, { name, catchphrase, organization, genre, links, theme }) {
+  const { error } = await supabase
+    .from('cards')
+    .update({ name, catchphrase, organization, genre, links, theme })
+    .eq('id', uuid);
+
+  if (error) throw new Error(`[Supabase] カード更新失敗: ${error.message}`);
+  console.log(`[Supabase] カード更新完了: uuid=${uuid}`);
+}
+
+/**
+ * 名刺の公開/非公開を切り替える
+ *
+ * @param {string} uuid
+ * @param {boolean} isPublic
+ * @returns {Promise<void>}
+ */
+export async function setCardPublic(uuid, isPublic) {
+  const { error } = await supabase
+    .from('cards')
+    .update({ is_public: isPublic })
+    .eq('id', uuid);
+
+  if (error) throw new Error(`[Supabase] 公開設定更新失敗: ${error.message}`);
+  console.log(`[Supabase] 公開設定更新: uuid=${uuid} is_public=${isPublic}`);
+}
+
+// ============================================================
 // 接続確認（Step 14 から継続）
 // ============================================================
 

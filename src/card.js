@@ -48,6 +48,12 @@ async function main() {
     setStatus('名刺情報を取得中...');
     const card = await loadCard(uuid);
 
+    // 非公開チェック
+    if (card.is_public === false) {
+      showError('この名刺は現在非公開です。', 'オーナーがこの名刺を非公開に設定しています');
+      return;
+    }
+
     // ページタイトルを名前に更新
     if (card.name) document.title = `${card.name} - V名刺`;
 
