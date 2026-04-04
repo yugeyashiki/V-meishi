@@ -17,6 +17,7 @@
  */
 
 import * as THREE from 'three';
+import { MMDParser } from 'three/addons/libs/mmdparser.module.js';
 import { validateVMB } from './encoder.js';
 // MMDToonMaterial は ShaderMaterial のサブクラスで独自シェーダーを持つため
 // three/addons からは export されない。静的表示には MeshToonMaterial で代用する。
@@ -233,6 +234,38 @@ export async function decodeMesh(buffer, onProgress) {
   }
 
   decodedMesh.bind(skeleton);
+
+  // PMXバイナリがあれば MMDParser でパースし userData.MMD を設定する。
+  // MMDAnimationHelper は mesh.geometry.userData.MMD.iks / grants / bones を参照して
+  // IK ソルバー・付与ボーン処理を行うため、VMD モーション再生に必須。
+  if (pmxBuffer) {
+    try {
+      const parser     = new MMDParser.Parser();
+      const pmxObject  = parser.parsePmx(pmxBuffer, true); // true = leftToRight 変換
+      geo.userData.MMD = {
+        bones: pmxObject.bones.map((bone, i) => ({
+          index:               i,
+          transformationClass: bone.transformationClass,
+          parentIndex:         bone.parentIndex,
+          name:                bone.name,
+          pos:                 bone.position,
+          rotq:                [0, 0, 0, 1],
+          scl:                 [1, 1, 1],
+          rigidBodyType:       -1,
+        })),
+        iks:       pmxObject.iks      ?? [],
+        grants:    pmxObject.grants   ?? [],
+        morphs:    pmxObject.morphs   ?? [],
+        materials: [],
+      };
+      console.log('[Motion] userData.MMD設定完了');
+      console.log('[Motion] bones:', pmxObject.bones.length,
+                  ' iks:', pmxObject.iks?.length  ?? 0,
+                  ' grants:', pmxObject.grants?.length ?? 0);
+    } catch (e) {
+      console.warn('[Motion] userData.MMD設定失敗 → 静止表示:', e);
+    }
+  }
 
   report(100);
   console.log('[Decoder] デコード完了');
