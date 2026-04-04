@@ -139,7 +139,7 @@ function bindShareButton(container) {
 async function runUploadFlow(container) {
   // 動的インポートでバンドルサイズを最小化
   const [
-    { getMesh },
+    { getMesh, getVmdBuffer },
     { encodeMesh },
     { generateKey, exportKeyToBase64, encrypt },
     { uploadModel, saveCard, getCardCount, MAX_CARDS },
@@ -175,7 +175,11 @@ async function runUploadFlow(container) {
 
   try {
     setShareStatus(container, 'エンコード中...');
-    const vmb1Buf = await encodeMesh(mesh);
+    const vmdBuf  = getVmdBuffer();
+    const vmb1Buf = await encodeMesh(mesh, vmdBuf);
+    if (vmdBuf) {
+      console.log(`[Motion] VMDエンコード完了: ${(vmdBuf.byteLength / 1024).toFixed(1)} KB`);
+    }
 
     setShareStatus(container, '暗号化中...');
     const key       = await generateKey();
@@ -194,6 +198,9 @@ async function runUploadFlow(container) {
     const uuid         = crypto.randomUUID();
     const storagePath  = await uploadModel(encBuf, uuid);
     await saveCard({ uuid, state: getState(), keyBase64, modelStoragePath: storagePath });
+    if (vmdBuf) {
+      console.log('[Motion] Supabase保存完了');
+    }
 
     const url = `${window.location.origin}/card/?id=${uuid}`;
     setShareStatus(container, 'QR コードを生成中...');

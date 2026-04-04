@@ -52,6 +52,9 @@ let rotationX = 0;
 // 物理演算フラグ
 let usePhysics = false;
 
+// アップロード済み VMD の ArrayBuffer（エンコード時に参照）
+let vmdBuffer = null;
+
 // ============================================================
 // 公開 API
 // ============================================================
@@ -109,6 +112,9 @@ export async function loadModelFile(modelUrl, textureUrlMap, onProgress) {
   mesh = await loadModel({ modelUrl, textureUrlMap, onProgress });
   mesh.castShadow = true;
   scene.add(mesh);
+
+  // 新モデル読み込み時に前回のVMDバッファを破棄
+  vmdBuffer = null;
 
   // MMDAnimationHelper を生成・モデル登録
   helper = createHelper();
@@ -195,6 +201,22 @@ export async function loadFromVMB(vmbBuffer, onProgress) {
  */
 export function getMesh() {
   return mesh;
+}
+
+/**
+ * アップロードされた VMD の ArrayBuffer を保存する
+ * @param {ArrayBuffer} buf
+ */
+export function setVmdBuffer(buf) {
+  vmdBuffer = buf;
+}
+
+/**
+ * 保存済み VMD バッファを返す（エンコード用）
+ * @returns {ArrayBuffer|null}
+ */
+export function getVmdBuffer() {
+  return vmdBuffer;
 }
 
 /**

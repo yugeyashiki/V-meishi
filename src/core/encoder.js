@@ -58,6 +58,14 @@
  *   texHeight     : uint16
  *   texDataSize   : uint32
  *   texData       : texDataSize bytes
+ *
+ * [VMDセクション] ← encodeMesh() に vmdBuffer を渡したときのみ追記
+ *   hasVmd        : uint8   (0=VMDなし / 1=VMDあり)
+ *   vmdSize       : uint32  (hasVmd=1 のときのみ存在)
+ *   vmdData       : vmdSize bytes (hasVmd=1 のときのみ存在)
+ *
+ * ※ 後方互換: hasVmd=0 の場合はテクスチャセクションで読み終わるため
+ *   旧デコーダー / 旧共有URLに影響なし
  */
 
 import * as THREE from 'three';
@@ -80,10 +88,11 @@ const TEX_TYPE_PNG  = 1;
 /**
  * Three.js SkinnedMesh を VMB1 バイナリに変換する
  *
- * @param {THREE.SkinnedMesh} mesh - MMDLoader でロード済みのメッシュ
+ * @param {THREE.SkinnedMesh}  mesh       - MMDLoader でロード済みのメッシュ
+ * @param {ArrayBuffer|null}   [vmdBuffer] - VMD ファイルの ArrayBuffer（省略可）
  * @returns {Promise<ArrayBuffer>}  VMB1 フォーマットのバイナリ
  */
-export async function encodeMesh(mesh) {
+export async function encodeMesh(mesh, vmdBuffer = null) {
   const geo       = mesh.geometry;
   const skeleton  = mesh.skeleton;
   const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
@@ -268,6 +277,17 @@ export async function encodeMesh(mesh) {
     w.writeUint16(tex.height);
     w.writeUint32(tex.data.byteLength);
     w.writeBytes(tex.data);
+  }
+
+  // VMDセクション（オプション）
+  if (vmdBuffer) {
+    const vmdBytes = new Uint8Array(vmdBuffer);
+    w.writeUint8(1);                    // hasVmd = 1
+    w.writeUint32(vmdBytes.byteLength); // vmdSize
+    w.writeBytes(vmdBytes);             // vmdData
+    console.log(`[Encoder] VMDセクション追記: ${(vmdBytes.byteLength / 1024).toFixed(1)} KB`);
+  } else {
+    w.writeUint8(0);                    // hasVmd = 0
   }
 
   const buf = w.toArrayBuffer();

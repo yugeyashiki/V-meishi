@@ -10,6 +10,7 @@
 
 import * as AvatarViewer from './AvatarViewer.js';
 import { getCurrentUser } from '../auth.js';
+// NOTE: setVmdBuffer は AvatarViewer 経由で呼ぶ（* import済み）
 
 // 物理演算トグルの現在値（Ammo.js 読み込み成否に依存するため init 後に取得）
 let physicsEnabled = true;
@@ -313,8 +314,12 @@ async function handleVmdFile(file, container) {
     setStatus(statusEl, '', '');
   }
 
-  const vmdUrl = createObjectUrl(file);
   console.log(`[Motion] VMDファイル選択: ${file.name}`);
+  const vmdArrayBuffer = await file.arrayBuffer();
+  console.log('[Motion] VMDサイズ:', vmdArrayBuffer.byteLength, 'bytes');
+  AvatarViewer.setVmdBuffer(vmdArrayBuffer);
+
+  const vmdUrl = createObjectUrl(file);
 
   try {
     await AvatarViewer.loadMotionFile(vmdUrl);
