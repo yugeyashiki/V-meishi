@@ -145,6 +145,17 @@ export async function decodeMesh(buffer, onProgress) {
 
   console.log(`[Decoder] マテリアル=${matCount} テクスチャ=${texCount}`);
 
+  // VMDセクション確認（デバッグログ）
+  // 旧VMB1ファイルは末尾バイトなし → remaining=0 でスキップ
+  if (r.remaining >= 1) {
+    const hasVmd = r.readUint8();
+    console.log(`[Decoder] hasVmd: ${hasVmd}`);
+    if (hasVmd === 1 && r.remaining >= 4) {
+      const vmdSize = r.readUint32();
+      console.log(`[Decoder] VMDサイズ: ${vmdSize} bytes`);
+    }
+  }
+
   // ============================================================
   // Three.js オブジェクトの構築
   // ============================================================
@@ -302,6 +313,8 @@ class BinaryReader {
     this._buffer = buffer;
     this._offset = 0;
   }
+
+  get remaining() { return this._view.byteLength - this._offset; }
 
   skip(n)       { this._offset += n; }
 
