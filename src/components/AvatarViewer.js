@@ -203,21 +203,26 @@ export async function loadFromVMB(vmbBuffer, onProgress) {
     // MMDLoaderで再読み込みすることで userData.MMD を取得できる。
     console.log(`[Motion] PMX再読み込み開始: ${(decodedPmx.byteLength / 1024).toFixed(1)} KB`);
 
-    // テクスチャファイルが存在しないため、全テクスチャを 1x1 白 PNG で代替し、
+    // BlobURL は拡張子を持たないため MMDLoader が形式を判定できない。
+    // URLModifier で 'model.pmx'（拡張子付き仮URL）を実際の BlobURL にマッピングし、
+    // MMDLoader._extractExtension が '.pmx' を返せるようにする。
+    // テクスチャファイルは存在しないため 1x1 白 PNG で代替し、
     // ロード後にデコード済みメッシュのテクスチャをマテリアルインデックスでコピーする。
-    const BLANK_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-    const manager  = new THREE.LoadingManager();
+    const BLANK_PNG  = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    const PMX_FAKE   = 'model.pmx'; // 拡張子判定のための仮URL
+    const pmxBlobUrl = URL.createObjectURL(new Blob([decodedPmx]));
+
+    const manager = new THREE.LoadingManager();
     manager.setURLModifier((url) => {
+      if (url === PMX_FAKE) return pmxBlobUrl;      // 仮URL → 実BlobURL
       if (url.startsWith('blob:') || url.startsWith('data:')) return url;
-      return BLANK_PNG;
+      return BLANK_PNG;                             // テクスチャパスは白PNG
     });
 
-    const pmxUrl = URL.createObjectURL(new Blob([decodedPmx]));
-
     new MMDLoader(manager).load(
-      pmxUrl,
+      PMX_FAKE,
       (pmxMesh) => {
-        URL.revokeObjectURL(pmxUrl);
+        URL.revokeObjectURL(pmxBlobUrl);
 
         // テクスチャをデコード済みメッシュからコピー（マテリアルインデックスで対応）
         const srcMats = Array.isArray(decodedMesh.material) ? decodedMesh.material : [decodedMesh.material];
@@ -259,7 +264,7 @@ export async function loadFromVMB(vmbBuffer, onProgress) {
       },
       null,
       (err) => {
-        URL.revokeObjectURL(pmxUrl);
+        URL.revokeObjectURL(pmxBlobUrl);
         console.error('[Motion] PMX再読み込み失敗 → 静止表示継続:', err);
       },
     );
