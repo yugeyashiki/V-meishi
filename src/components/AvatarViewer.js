@@ -199,6 +199,10 @@ export async function loadFromVMB(vmbBuffer, onProgress) {
     // loadMotion()（remove→re-add）は使わず2段階に分ける:
     //   1. physics のみで登録
     //   2. loadAnimation 完了後に animation のみ追加
+    console.log('[Debug] mesh.geometry:', mesh.geometry);
+    console.log('[Debug] mesh.geometry.userData:', mesh.geometry.userData);
+    console.log('[Debug] mesh.userData:', mesh.userData);
+
     helper = createHelper();
     helper.add(mesh, { physics: true });
 
