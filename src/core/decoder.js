@@ -37,6 +37,13 @@ import { validateVMB } from './encoder.js';
 export async function decodeMesh(buffer, onProgress) {
   const report = onProgress ?? (() => {});
 
+  // ── 先頭バイト確認（デバッグ用）──
+  const headerBytes = new Uint8Array(buffer.slice(0, 16));
+  console.log('[Decoder] 先頭バイト:',
+    Array.from(headerBytes).map((b) => b.toString(16).padStart(2, '0')).join(' '));
+  console.log('[Decoder] 先頭文字列:',
+    new TextDecoder().decode(buffer.slice(0, 16)));
+
   // ── フォーマット検証 ──
   const validation = validateVMB(buffer);
   if (!validation.valid) {

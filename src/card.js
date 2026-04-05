@@ -16,7 +16,7 @@
 
 import { loadCard, downloadModel, incrementViewCount } from './core/supabase.js';
 import { importKeyFromBase64, decrypt }                from './core/crypto.js';
-import { init as initAvatarViewer, loadFromVMB, setPose, getMesh } from './components/AvatarViewer.js';
+import { init as initAvatarViewer, loadFromVMB, loadVrmFile, setPose, getMesh } from './components/AvatarViewer.js';
 
 // SNS プラットフォームアイコン（CardLayout.js と同じ定義）
 const PLATFORM_ICONS = {
@@ -66,13 +66,30 @@ async function main() {
     setStatus('モデルをダウンロード中...');
     const encBuf = await downloadModel(card.model_storage_path);
 
-    // ⑤ 復号
+    // ⑤ 復号（VRM・MMD 共通の AES-GCM 復号）
     setStatus('復号中...');
-    const key    = await importKeyFromBase64(card.encryption_key);
-    const vmb1   = await decrypt(key, encBuf);
+    const key       = await importKeyFromBase64(card.encryption_key);
+    const decrypted = await decrypt(key, encBuf);
 
-    // ⑥ デコード → Three.js シーンへ配置
-    await loadFromVMB(vmb1, (p) => setStatus(`3Dモデルを展開中... ${p}%`));
+    // ⑥ モデル種別を解決（DB の model_type 優先、未設定時はマジックバイトで判定）
+    const modelType = resolveModelType(card.model_type, decrypted);
+    console.log('[Card] model_type:', modelType);
+
+    if (modelType === 'vrm') {
+      // VRM: 復号済みバイナリをそのまま GLTF として読み込む
+      console.log('[VRM Decoder] 復号完了:', decrypted.byteLength, 'bytes');
+      setStatus('3Dモデルを展開中...');
+      const blobUrl = URL.createObjectURL(
+        new Blob([decrypted], { type: 'model/gltf-binary' }),
+      );
+      await loadVrmFile(blobUrl);
+      URL.revokeObjectURL(blobUrl);
+      console.log('[VRM] 閲覧URL表示完了');
+
+    } else {
+      // MMD: 復号済みバイナリを VMB1 としてデコード
+      await loadFromVMB(decrypted, (p) => setStatus(`3Dモデルを展開中... ${p}%`));
+    }
 
     // ⑦ 保存済みポーズを復元
     if (card.pose && Object.keys(card.pose).length > 0) {
@@ -208,6 +225,27 @@ function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]),
   );
+}
+
+/**
+ * モデル種別を解決する
+ * DB の model_type を優先し、未設定（SQL 未実行）の場合は
+ * 復号済みデータの先頭マジックバイトで VRM（GLB）を検出する。
+ *
+ * @param {string|null} declaredType - card.model_type（'vrm' | 'mmd' | null）
+ * @param {ArrayBuffer} decryptedBuffer
+ * @returns {'vrm'|'mmd'}
+ */
+function resolveModelType(declaredType, decryptedBuffer) {
+  if (declaredType === 'vrm' || declaredType === 'mmd') return declaredType;
+
+  // model_type カラム未設定の場合: GLB マジックバイト "glTF" (0x67 0x6C 0x54 0x46) で判定
+  const b = new Uint8Array(decryptedBuffer, 0, 4);
+  if (b[0] === 0x67 && b[1] === 0x6C && b[2] === 0x54 && b[3] === 0x46) {
+    console.log('[Card] model_type未設定 → マジックバイト "glTF" を検出 → VRM として処理');
+    return 'vrm';
+  }
+  return 'mmd';
 }
 
 // ============================================================
