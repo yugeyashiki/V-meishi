@@ -139,13 +139,15 @@ function bindShareButton(container) {
 async function runUploadFlow(container) {
   // 動的インポートでバンドルサイズを最小化
   const [
-    { getMesh, getVmdBuffer, getPmxBuffer },
+    { getMesh, getVmdBuffer, getPmxBuffer, getVrm, getVrmBuffer },
     { encodeMesh },
+    { encodeVRM },
     { generateKey, exportKeyToBase64, encrypt },
-    { uploadModel, saveCard, getCardCount, MAX_CARDS },
+    { uploadModel, saveCard, saveVRMCard, getCardCount, MAX_CARDS },
   ] = await Promise.all([
     import('./AvatarViewer.js'),
     import('../core/encoder.js'),
+    import('../core/vrm-encoder.js'),
     import('../core/crypto.js'),
     import('../core/supabase.js'),
   ]);
@@ -165,8 +167,10 @@ async function runUploadFlow(container) {
     return;
   }
 
+  const vrm  = getVrm();
   const mesh = getMesh();
-  if (!mesh) {
+
+  if (!vrm && !mesh) {
     showShareError(container, 'モデルが読み込まれていません。先にモデルをアップロードしてください。');
     return;
   }
@@ -174,43 +178,76 @@ async function runUploadFlow(container) {
   showShareUploading(container);
 
   try {
-    setShareStatus(container, 'エンコード中...');
-    const vmdBuf  = getVmdBuffer();
-    const pmxBuf  = getPmxBuffer();
-    console.log('[QRPanel] getPmxBuffer():', pmxBuf?.byteLength ?? 'null');
-    console.log('[QRPanel] getVmdBuffer():', vmdBuf?.byteLength ?? 'null');
-    const vmb1Buf = await encodeMesh(mesh, vmdBuf, pmxBuf);
-    if (vmdBuf) {
-      console.log(`[Motion] VMDエンコード完了: ${(vmdBuf.byteLength / 1024).toFixed(1)} KB`);
-    }
-    if (pmxBuf) {
-      console.log(`[Motion] PMXエンコード完了: ${(pmxBuf.byteLength / 1024).toFixed(1)} KB`);
-    }
+    // ============================================================
+    // VRM フロー
+    // ============================================================
+    if (vrm) {
+      const vrmBuf = getVrmBuffer();
+      if (!vrmBuf) {
+        throw new Error('VRMバッファが見つかりません。再度アップロードしてください。');
+      }
 
-    setShareStatus(container, '暗号化中...');
-    const key       = await generateKey();
-    const keyBase64 = await exportKeyToBase64(key);
-    const encBuf    = await encrypt(key, vmb1Buf);
+      setShareStatus(container, '暗号化中...');
+      const { encBuf, keyBase64 } = await encodeVRM(vrmBuf);
 
-    const fileMB = encBuf.byteLength / 1024 / 1024;
-    console.log(`[DataPolicy] ファイルサイズ: ${fileMB.toFixed(1)} MB / 上限 ${MAX_FILE_SIZE_MB} MB → ${encBuf.byteLength > MAX_FILE_SIZE_BYTES ? 'NG' : 'OK'}`);
-    if (encBuf.byteLength > MAX_FILE_SIZE_BYTES) {
-      throw new Error(
-        `モデルデータが上限サイズ（${MAX_FILE_SIZE_MB}MB）を超えています。\nテクスチャ解像度を下げるか、別のモデルをお試しください。`
-      );
+      const fileMB = encBuf.byteLength / 1024 / 1024;
+      console.log(`[DataPolicy] VRMファイルサイズ: ${fileMB.toFixed(1)} MB / 上限 ${MAX_FILE_SIZE_MB} MB → ${encBuf.byteLength > MAX_FILE_SIZE_BYTES ? 'NG' : 'OK'}`);
+      if (encBuf.byteLength > MAX_FILE_SIZE_BYTES) {
+        throw new Error(`モデルデータが上限サイズ（${MAX_FILE_SIZE_MB}MB）を超えています。別のモデルをお試しください。`);
+      }
+
+      setShareStatus(container, 'アップロード中...');
+      const uuid        = crypto.randomUUID();
+      const storagePath = await uploadModel(encBuf, uuid);
+      await saveVRMCard({ uuid, state: getState(), keyBase64, modelStoragePath: storagePath });
+
+      const url = `${window.location.origin}/card/?id=${uuid}`;
+      console.log('[VRM] 共有URL生成:', url);
+      setShareStatus(container, 'QR コードを生成中...');
+      await showShareDone(container, url);
+
+    // ============================================================
+    // MMD フロー（既存）
+    // ============================================================
+    } else {
+      setShareStatus(container, 'エンコード中...');
+      const vmdBuf  = getVmdBuffer();
+      const pmxBuf  = getPmxBuffer();
+      console.log('[QRPanel] getPmxBuffer():', pmxBuf?.byteLength ?? 'null');
+      console.log('[QRPanel] getVmdBuffer():', vmdBuf?.byteLength ?? 'null');
+      const vmb1Buf = await encodeMesh(mesh, vmdBuf, pmxBuf);
+      if (vmdBuf) {
+        console.log(`[Motion] VMDエンコード完了: ${(vmdBuf.byteLength / 1024).toFixed(1)} KB`);
+      }
+      if (pmxBuf) {
+        console.log(`[Motion] PMXエンコード完了: ${(pmxBuf.byteLength / 1024).toFixed(1)} KB`);
+      }
+
+      setShareStatus(container, '暗号化中...');
+      const key       = await generateKey();
+      const keyBase64 = await exportKeyToBase64(key);
+      const encBuf    = await encrypt(key, vmb1Buf);
+
+      const fileMB = encBuf.byteLength / 1024 / 1024;
+      console.log(`[DataPolicy] ファイルサイズ: ${fileMB.toFixed(1)} MB / 上限 ${MAX_FILE_SIZE_MB} MB → ${encBuf.byteLength > MAX_FILE_SIZE_BYTES ? 'NG' : 'OK'}`);
+      if (encBuf.byteLength > MAX_FILE_SIZE_BYTES) {
+        throw new Error(
+          `モデルデータが上限サイズ（${MAX_FILE_SIZE_MB}MB）を超えています。\nテクスチャ解像度を下げるか、別のモデルをお試しください。`
+        );
+      }
+
+      setShareStatus(container, 'アップロード中...');
+      const uuid        = crypto.randomUUID();
+      const storagePath = await uploadModel(encBuf, uuid);
+      await saveCard({ uuid, state: getState(), keyBase64, modelStoragePath: storagePath });
+      if (vmdBuf) {
+        console.log('[Motion] Supabase保存完了');
+      }
+
+      const url = `${window.location.origin}/card/?id=${uuid}`;
+      setShareStatus(container, 'QR コードを生成中...');
+      await showShareDone(container, url);
     }
-
-    setShareStatus(container, 'アップロード中...');
-    const uuid         = crypto.randomUUID();
-    const storagePath  = await uploadModel(encBuf, uuid);
-    await saveCard({ uuid, state: getState(), keyBase64, modelStoragePath: storagePath });
-    if (vmdBuf) {
-      console.log('[Motion] Supabase保存完了');
-    }
-
-    const url = `${window.location.origin}/card/?id=${uuid}`;
-    setShareStatus(container, 'QR コードを生成中...');
-    await showShareDone(container, url);
 
   } catch (err) {
     console.error('[QRCodePanel] Web 共有エラー:', err);

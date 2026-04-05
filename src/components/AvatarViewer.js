@@ -14,6 +14,8 @@
 
 import * as THREE from 'three';
 import { MMDLoader } from 'three/addons/loaders/MMDLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { VRMLoaderPlugin } from '@pixiv/three-vrm';
 import { initPhysics, createHelper, loadModel, loadMotion } from '../core/mmd.js';
 import { initInteraction } from '../core/interaction.js';
 import { decodeMesh } from '../core/decoder.js';
@@ -57,6 +59,12 @@ let vmdBuffer = null;
 
 // アップロード済み PMX の ArrayBuffer（エンコード時に参照）
 let pmxBuffer = null;
+
+// VRM モデル（@pixiv/three-vrm）
+let vrm = null;
+
+// アップロード済み VRM の ArrayBuffer（エンコード時に参照）
+let vrmBuffer = null;
 
 // ============================================================
 // 公開 API
@@ -104,8 +112,54 @@ export async function init(canvasEl) {
  * @param {Map}      textureUrlMap  - filename.toLowerCase() → ObjectURL
  * @param {Function} [onProgress]   - (percent) => void
  */
-export async function loadModelFile(modelUrl, textureUrlMap, onProgress) {
+/**
+ * VRM ファイルをロードしてシーンに表示する
+ * @param {string} vrmUrl - .vrm ファイルの ObjectURL
+ */
+export async function loadVrmFile(vrmUrl) {
   // 既存モデルの破棄
+  if (mesh) {
+    scene.remove(mesh);
+    if (helper) { helper.remove(mesh); helper = null; }
+    mesh = null;
+  }
+  if (vrm) {
+    scene.remove(vrm.scene);
+    vrm = null;
+  }
+  vmdBuffer = null;
+  pmxBuffer = null;
+  vrmBuffer = null;
+
+  const gltfLoader = new GLTFLoader();
+  gltfLoader.register((parser) => new VRMLoaderPlugin(parser));
+
+  return new Promise((resolve, reject) => {
+    gltfLoader.load(
+      vrmUrl,
+      (gltf) => {
+        vrm = gltf.userData.vrm;
+        // VRM は 1unit=1m、MMDカメラ設定に合わせてスケール調整
+        vrm.scene.scale.setScalar(10);
+        scene.add(vrm.scene);
+        console.log('[VRM] 表示完了');
+        resolve(vrm);
+      },
+      undefined,
+      (err) => {
+        console.error('[VRM] 読み込みエラー:', err);
+        reject(err);
+      },
+    );
+  });
+}
+
+export async function loadModelFile(modelUrl, textureUrlMap, onProgress) {
+  // 既存モデルの破棄（VRM も含む）
+  if (vrm) {
+    scene.remove(vrm.scene);
+    vrm = null;
+  }
   if (mesh) {
     scene.remove(mesh);
     if (helper) helper.remove(mesh);
@@ -116,9 +170,10 @@ export async function loadModelFile(modelUrl, textureUrlMap, onProgress) {
   mesh.castShadow = true;
   scene.add(mesh);
 
-  // 新モデル読み込み時に前回のVMD/PMXバッファを破棄
+  // 新モデル読み込み時に前回のバッファを破棄
   vmdBuffer = null;
   pmxBuffer = null;
+  vrmBuffer = null;
 
   // MMDAnimationHelper を生成・モデル登録
   helper = createHelper();
@@ -264,6 +319,30 @@ export function getPmxBuffer() {
 }
 
 /**
+ * 現在ロード済みの VRM を返す
+ * @returns {import('@pixiv/three-vrm').VRM|null}
+ */
+export function getVrm() {
+  return vrm;
+}
+
+/**
+ * アップロードされた VRM の ArrayBuffer を保存する
+ * @param {ArrayBuffer} buf
+ */
+export function setVrmBuffer(buf) {
+  vrmBuffer = buf;
+}
+
+/**
+ * 保存済み VRM バッファを返す（エンコード用）
+ * @returns {ArrayBuffer|null}
+ */
+export function getVrmBuffer() {
+  return vrmBuffer;
+}
+
+/**
  * canvas が別コンテナへ移動した後に呼ぶ（ResizeObserver 更新 + 即時リサイズ）
  * CardLayout のモード切り替えから呼ばれる
  */
@@ -277,6 +356,7 @@ export function onContainerChanged() {
 export function dispose() {
   if (animFrameId) cancelAnimationFrame(animFrameId);
   if (cleanupInteraction) cleanupInteraction();
+  if (vrm) { scene.remove(vrm.scene); vrm = null; }
   if (renderer) renderer.dispose();
 }
 
@@ -340,6 +420,13 @@ function animate() {
 
   if (helper) {
     helper.update(delta);
+  }
+
+  if (vrm) {
+    // Math.PI を加算して正面（+Z方向）を向かせる（GLTF座標系補正）
+    vrm.scene.rotation.y = Math.PI + THREE.MathUtils.degToRad(rotationY);
+    vrm.scene.rotation.x = THREE.MathUtils.degToRad(rotationX);
+    vrm.update(delta);
   }
 
   renderer.render(scene, camera);

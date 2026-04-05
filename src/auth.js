@@ -54,7 +54,7 @@ export async function getCurrentUser() {
  * @returns {{ data: { subscription } }} unsubscribe 用オブジェクト
  */
 export function onAuthStateChange(callback) {
-  return supabase.auth.onAuthStateChange((_event, session) => {
-    callback(session?.user ?? null);
+  return supabase.auth.onAuthStateChange((event, session) => {
+    callback(session?.user ?? null, event);
   });
 }

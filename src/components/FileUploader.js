@@ -1,18 +1,12 @@
 /**
  * components/FileUploader.js
- * PMX / VMD ファイルのローカル読み込み UI
- *
- * 方針A: webkitdirectory でフォルダごとアップロード
- *   - PMX と同フォルダのテクスチャを全て ObjectURL 化
- *   - AvatarViewer.loadModelFile(pmxUrl, textureUrlMap, onProgress) に渡す
- *   - ドラッグ&ドロップにも対応（DataTransfer API でフォルダを再帰収集）
+ * モデル種類選択 → PMX / VMD または VRM ファイルのローカル読み込み UI
  */
 
 import * as AvatarViewer from './AvatarViewer.js';
 import { getCurrentUser } from '../auth.js';
-// NOTE: setVmdBuffer は AvatarViewer 経由で呼ぶ（* import済み）
 
-// 物理演算トグルの現在値（Ammo.js 読み込み成否に依存するため init 後に取得）
+// 物理演算トグルの現在値
 let physicsEnabled = true;
 
 // テクスチャとして扱う拡張子
@@ -48,18 +42,64 @@ function revokeAll() {
  * @param {HTMLElement} container - #file-uploader-section
  */
 export function init(container) {
-  container.innerHTML = buildHTML();
-  bindEvents(container);
+  console.log('[UI] initFileUploader 呼び出し');
+  console.log('[UI] container:', container?.id, '現在のHTML先頭:', container?.innerHTML?.slice(0, 80));
+  container.innerHTML = buildModelSelectHTML();
+  bindModelSelectEvents(container);
+  console.log('[UI] モデル選択画面を描画完了');
 }
 
 // ============================================================
-// HTML 生成
+// HTML 生成: モデル種類選択
 // ============================================================
 
-function buildHTML() {
+function buildModelSelectHTML() {
   return `
     <div class="file-uploader">
-      <h2 class="uploader-title">アバターを読み込む</h2>
+      <h2 class="uploader-title">使用するモデルの種類を選択してください</h2>
+      <div class="model-type-cards">
+        <button class="model-type-card" id="select-mmd">
+          <span class="model-type-card__icon">🎭</span>
+          <span class="model-type-card__name">MMD（PMX）</span>
+          <span class="model-type-card__desc">MMDモデル（.pmxファイル）を含む<br>フォルダをアップロード</span>
+        </button>
+        <button class="model-type-card" id="select-vrm">
+          <span class="model-type-card__icon">🤖</span>
+          <span class="model-type-card__name">VRM</span>
+          <span class="model-type-card__desc">VRMモデル（.vrmファイル）を<br>アップロード</span>
+        </button>
+        <button class="model-type-card model-type-card--disabled" id="select-live2d" disabled title="準備中">
+          <span class="model-type-card__icon">✏️</span>
+          <span class="model-type-card__name">Live2D</span>
+          <span class="model-type-card__desc">準備中</span>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function bindModelSelectEvents(container) {
+  container.querySelector('#select-mmd').addEventListener('click', () => {
+    container.innerHTML = buildMmdHTML();
+    bindMmdEvents(container);
+  });
+  container.querySelector('#select-vrm').addEventListener('click', () => {
+    container.innerHTML = buildVrmHTML();
+    bindVrmEvents(container);
+  });
+}
+
+// ============================================================
+// HTML 生成: MMD アップロード
+// ============================================================
+
+function buildMmdHTML() {
+  return `
+    <div class="file-uploader">
+      <div class="uploader-header">
+        <button class="btn-back" id="btn-back">← 戻る</button>
+        <h2 class="uploader-title">アバターを読み込む</h2>
+      </div>
 
       <!-- PMX：フォルダ選択 -->
       <div class="upload-zone" id="pmx-drop-zone">
@@ -110,11 +150,12 @@ function buildHTML() {
   `;
 }
 
-// ============================================================
-// イベント登録
-// ============================================================
+function bindMmdEvents(container) {
+  container.querySelector('#btn-back').addEventListener('click', () => {
+    container.innerHTML = buildModelSelectHTML();
+    bindModelSelectEvents(container);
+  });
 
-function bindEvents(container) {
   // --- 物理演算トグル ---
   container.querySelector('#physics-checkbox').addEventListener('change', (e) => {
     physicsEnabled = e.target.checked;
@@ -170,6 +211,71 @@ function bindEvents(container) {
 }
 
 // ============================================================
+// HTML 生成: VRM アップロード
+// ============================================================
+
+function buildVrmHTML() {
+  return `
+    <div class="file-uploader">
+      <div class="uploader-header">
+        <button class="btn-back" id="btn-back">← 戻る</button>
+        <h2 class="uploader-title">VRMアバターを読み込む</h2>
+      </div>
+
+      <div class="upload-zone" id="vrm-drop-zone">
+        <div class="upload-zone__body">
+          <span class="upload-zone__icon">🤖</span>
+          <p class="upload-zone__main" id="vrm-zone-label">
+            VRM（.vrm）をドロップ<br>
+            または <span class="upload-zone__link">クリックして選択</span>
+          </p>
+          <p class="upload-zone__sub">.vrmファイルを選択してください</p>
+        </div>
+        <input type="file" id="vrm-file-input" accept=".vrm" class="upload-input">
+      </div>
+      <p id="vrm-status" class="upload-status"></p>
+
+      <div id="load-progress" class="load-progress hidden">
+        <div class="progress-bar">
+          <div class="progress-bar__fill" id="progress-fill"></div>
+        </div>
+        <p id="progress-label" class="progress-label">読み込み中...</p>
+      </div>
+    </div>
+  `;
+}
+
+function bindVrmEvents(container) {
+  container.querySelector('#btn-back').addEventListener('click', () => {
+    container.innerHTML = buildModelSelectHTML();
+    bindModelSelectEvents(container);
+  });
+
+  const vrmZone  = container.querySelector('#vrm-drop-zone');
+  const vrmInput = container.querySelector('#vrm-file-input');
+
+  vrmZone.addEventListener('click', () => vrmInput.click());
+  vrmInput.addEventListener('change', () => {
+    if (vrmInput.files[0]) handleVrmFile(vrmInput.files[0], container);
+  });
+
+  vrmZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    vrmZone.classList.add('upload-zone--drag');
+  });
+  vrmZone.addEventListener('dragleave', () => {
+    vrmZone.classList.remove('upload-zone--drag');
+  });
+  vrmZone.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    vrmZone.classList.remove('upload-zone--drag');
+    const files = await collectDropFiles(e.dataTransfer);
+    const vrm = files.find((f) => f.name.toLowerCase().endsWith('.vrm'));
+    if (vrm) handleVrmFile(vrm, container);
+  });
+}
+
+// ============================================================
 // ドロップ時ファイル収集（フォルダを再帰的に展開）
 // ============================================================
 
@@ -195,7 +301,6 @@ async function traverseEntry(entry, result) {
   } else if (entry.isDirectory) {
     const reader = entry.createReader();
     let batch;
-    // readEntries は最大 100 件ずつ返すため、空になるまでループ
     do {
       batch = await new Promise((res, rej) => reader.readEntries(res, rej));
       await Promise.all(batch.map((e) => traverseEntry(e, result)));
@@ -232,16 +337,13 @@ async function handlePmxFiles(files, container) {
 
   const pmxFile = pmxFiles[0];
 
-  // ファイルサイズ警告
   const warnMsg = pmxFile.size > PMX_SIZE_WARN
     ? `⚠️ PMXファイルが大きいです（${toMb(pmxFile.size)}MB）。読み込みに時間がかかる場合があります。`
     : '';
   setStatus(statusEl, warnMsg, warnMsg ? 'warn' : '');
 
-  // 既存 ObjectURL を解放してから新規生成
   revokeAll();
 
-  // テクスチャ ObjectURL マップ構築（filename.toLowerCase() → ObjectURL）
   const textureUrlMap = new Map();
   for (const file of files) {
     const ext = extOf(file.name);
@@ -251,11 +353,8 @@ async function handlePmxFiles(files, container) {
   }
 
   const pmxUrl = createObjectUrl(pmxFile);
-
-  // PMX バイナリを先読みしておく（loadModelFile 完了後に setPmxBuffer する）
   const pmxArrayBuffer = await pmxFile.arrayBuffer();
 
-  // プログレス表示開始
   showProgress(container, true);
   updateProgress(container, 0, `${pmxFile.name} を読み込み中...`);
 
@@ -264,14 +363,12 @@ async function handlePmxFiles(files, container) {
       updateProgress(container, percent, `${pmxFile.name} を読み込み中... ${percent}%`);
     });
 
-    // loadModelFile 内で pmxBuffer がリセットされるため、完了後にセットする
     AvatarViewer.setPmxBuffer(pmxArrayBuffer);
     console.log('[FileUploader] PMXバッファ保存:', pmxArrayBuffer.byteLength, 'bytes');
 
     updateProgress(container, 100, '✅ 読み込み完了');
     setTimeout(() => showProgress(container, false), 1200);
 
-    // 警告がなければ成功メッセージで上書き
     if (!warnMsg) {
       setStatus(
         statusEl,
@@ -280,14 +377,12 @@ async function handlePmxFiles(files, container) {
       );
     }
 
-    // ゾーンラベルを「読み込み済み」に更新
     updateZoneLabel(
       container,
       '#pmx-zone-label',
       `<strong>${pmxFile.name}</strong> 読み込み済み<br><span class="upload-zone__link">別のフォルダを選択</span>`,
     );
 
-    // 物理演算トグルを表示（Ammo.js が無効なら非表示のまま）
     physicsEnabled = AvatarViewer.getPhysics();
     const toggleRow = container.querySelector('#physics-toggle-row');
     const checkbox  = container.querySelector('#physics-checkbox');
@@ -338,6 +433,52 @@ async function handleVmdFile(file, container) {
     );
   } catch (err) {
     console.error('[FileUploader] VMD load error:', err);
+    setStatus(statusEl, `❌ 読み込みエラー: ${err.message}`, 'error');
+  }
+}
+
+// ============================================================
+// VRM 処理
+// ============================================================
+
+async function handleVrmFile(file, container) {
+  const statusEl = container.querySelector('#vrm-status');
+
+  if (!file.name.toLowerCase().endsWith('.vrm')) {
+    setStatus(statusEl, '⚠️ .vrmファイルを選択してください。', 'warn');
+    return;
+  }
+
+  console.log(`[VRM] ファイル選択: ${file.name}`);
+
+  revokeAll();
+
+  // バッファを先に読んでおく（エンコード用）
+  const vrmArrayBuffer = await file.arrayBuffer();
+  const vrmUrl = createObjectUrl(file);
+
+  showProgress(container, true);
+  updateProgress(container, 0, `${file.name} を読み込み中...`);
+
+  try {
+    await AvatarViewer.loadVrmFile(vrmUrl);
+
+    // loadVrmFile 完了後にバッファをセット
+    AvatarViewer.setVrmBuffer(vrmArrayBuffer);
+    console.log('[FileUploader] VRMバッファ保存:', vrmArrayBuffer.byteLength, 'bytes');
+
+    updateProgress(container, 100, '✅ 読み込み完了');
+    setTimeout(() => showProgress(container, false), 1200);
+
+    setStatus(statusEl, `✅ ${file.name} を読み込みました`, 'ok');
+    updateZoneLabel(
+      container,
+      '#vrm-zone-label',
+      `<strong>${file.name}</strong> 読み込み済み<br><span class="upload-zone__link">別のファイルを選択</span>`,
+    );
+  } catch (err) {
+    console.error('[FileUploader] VRM load error:', err);
+    showProgress(container, false);
     setStatus(statusEl, `❌ 読み込みエラー: ${err.message}`, 'error');
   }
 }

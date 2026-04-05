@@ -130,7 +130,7 @@ export async function downloadModel(storagePath) {
  * @returns {Promise<string>} 保存した UUID
  * @throws {Error} DB 保存失敗時
  */
-export async function saveCard({ uuid, state, keyBase64, modelStoragePath, motionStoragePath = null }) {
+export async function saveCard({ uuid, state, keyBase64, modelStoragePath, motionStoragePath = null, modelType = 'mmd' }) {
   const { profile, links, theme, avatar } = state;
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -147,6 +147,7 @@ export async function saveCard({ uuid, state, keyBase64, modelStoragePath, motio
     model_storage_path:  modelStoragePath,
     encryption_key:      keyBase64,
     motion_storage_path: motionStoragePath,
+    model_type:          modelType,
     app_version:         APP_VERSION,
     user_id:             user?.id ?? null,
   };
@@ -161,6 +162,21 @@ export async function saveCard({ uuid, state, keyBase64, modelStoragePath, motio
 
   console.log(`[Supabase] DB 保存完了: uuid=${uuid}`);
   return uuid;
+}
+
+/**
+ * VRM 名刺を cards テーブルに保存する（saveCard の VRM 専用ラッパー）
+ *
+ * @param {object} params
+ * @param {string}   params.uuid               - crypto.randomUUID() で生成した UUID
+ * @param {object}   params.state              - getState() の返り値
+ * @param {string}   params.keyBase64          - exportKeyToBase64() の返り値
+ * @param {string}   params.modelStoragePath   - uploadModel() の返り値
+ * @returns {Promise<string>} 保存した UUID
+ */
+export async function saveVRMCard({ uuid, state, keyBase64, modelStoragePath }) {
+  console.log('[VRM] Supabase保存完了:', uuid);
+  return saveCard({ uuid, state, keyBase64, modelStoragePath, modelType: 'vrm' });
 }
 
 /**

@@ -113,7 +113,20 @@ document.getElementById('btn-logout')?.addEventListener('click', async () => {
 getCurrentUser().then(updateAuthUI);
 
 // 認証状態変化を監視
-onAuthStateChange(updateAuthUI);
+// SIGNED_IN 時はモデル選択画面を確実に表示する
+onAuthStateChange((user, event) => {
+  console.log('[Auth] event:', event, 'user:', user?.email ?? null);
+  console.log('[Auth] fileUploaderSection:', fileUploaderSection);
+  updateAuthUI(user);
+  if (
+    (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')
+    && user
+    && fileUploaderSection
+  ) {
+    console.log('[Auth] → initFileUploader 呼び出し (event:', event, ')');
+    initFileUploader(fileUploaderSection);
+  }
+});
 
 // ============================================================
 // 開発時: Supabase 接続確認（Step 14）+ エンコードテスト（Step 15）

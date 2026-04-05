@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@pixiv/three-vrm": "^3.5.1",
     "@supabase/supabase-js": "^2.100.1",
     "mmd-parser": "^1.0.4",
     "qrcode": "^1.5.4",
