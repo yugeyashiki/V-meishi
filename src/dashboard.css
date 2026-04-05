@@ -162,6 +162,23 @@ body.dashboard-page {
   white-space: nowrap;
 }
 
+.model-type-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.model-type-badge.vrm {
+  background: #7c3aed;
+  color: #fff;
+}
+.model-type-badge.mmd {
+  background: #1d4ed8;
+  color: #fff;
+}
+
 .db-card-item__date {
   font-size: 12px;
   color: rgba(255,255,255,0.4);

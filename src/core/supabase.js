@@ -288,7 +288,7 @@ export async function getCardCount(userId) {
 export async function getMyCards(userId) {
   const { data, error } = await supabase
     .from('cards')
-    .select('id, name, catchphrase, organization, genre, links, theme, created_at, is_public')
+    .select('id, name, catchphrase, organization, genre, links, theme, created_at, is_public, model_type')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 

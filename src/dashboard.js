@@ -82,6 +82,7 @@ function buildCardItemHTML(card) {
     <li class="db-card-item" data-uuid="${card.id}">
       <div class="db-card-item__header">
         <span class="db-card-item__name">${escapeHtml(card.name ?? '(名前なし)')}</span>
+        ${card.model_type === 'vrm' ? '<span class="model-type-badge vrm">VRM</span>' : '<span class="model-type-badge mmd">MMD</span>'}
         <span class="db-card-item__date">${createdAt}</span>
       </div>
 
